@@ -1,11 +1,10 @@
 import { WebConfig } from "./types";
 
-
 export const DefaultConfig: WebConfig = {
     env: process.env.ENV ?? "desa",
     baseUrl: process.env.BASE_URL ?? "https://example.com",
     browser: (process.env.BROWSER as any) ?? "chromium",
-    headless: process.env.HEADLESS === "false" ? false : true,
+    headless: process.env.CI === "true" || process.env.HEADLESS === "true",
     trace: (process.env.TRACE as any) ?? "retain-on-failure",
     video: process.env.VIDEO === "true",
     screenshotOnFailure: true,

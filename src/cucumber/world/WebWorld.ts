@@ -14,8 +14,9 @@ import {
 } from '../../helpers/WordReportHelper';
 
 export interface WebWorldParameters {
-  env?: string;      // 'cert' | 'desa' | 'prod'
-  baseUrl?: string;  // override opcional
+  env?: string;
+  baseUrl?: string;
+  browser?: string;  // Añade browser aquí
 }
 
 export class WebWorld {
@@ -30,7 +31,15 @@ export class WebWorld {
   constructor(opts: IWorldOptions) {
     this.parameters = (opts.parameters as WebWorldParameters) || {};
     ConfigManager.load(this.parameters.env);
-    if (this.parameters.baseUrl) ConfigManager.override({ baseUrl: this.parameters.baseUrl });
+    
+    // Aplica overrides de parámetros
+    const overrides: any = {};
+    if (this.parameters.baseUrl) overrides.baseUrl = this.parameters.baseUrl;
+    if (this.parameters.browser) overrides.browser = this.parameters.browser;
+    
+    if (Object.keys(overrides).length > 0) {
+      ConfigManager.override(overrides);
+    }
   }
 
   /** ===== Ciclo de vida ===== **/
