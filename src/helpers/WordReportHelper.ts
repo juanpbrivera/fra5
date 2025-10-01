@@ -6,14 +6,13 @@ export interface WordReportData {
   scenario: string;
   status: 'PASSED' | 'FAILED';
   steps: Array<{ name: string; status: string; errorMessage?: string }>;
-  screenshots?: string[]; // rutas a .png
+  screenshots?: string[];
   startedAt?: string;
   endedAt?: string;
   env?: string;
 }
 
 export function defaultWebReportTemplate(): string {
-  // ruta fija dentro del paquete, igual que en API
   return path.resolve(__dirname, '../../templates/plantilla-reporte.docx');
 }
 
@@ -23,10 +22,7 @@ export async function generateWordReport(
   outPath: string
 ) {
   const template = readFileSync(templatePath);
-  const buffer = await createReport({
-    template,
-    data
-  });
+  const buffer = await createReport({ template, data });
   writeFileSync(outPath, buffer);
   return outPath;
 }

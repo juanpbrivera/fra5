@@ -6,34 +6,27 @@ import { BrowserFactory } from '../../core/browsers/BrowserFactory';
 import { ElementManager } from '../../elements/ElementManager';
 import { WaitStrategies } from '../../elements/WaitStrategies';
 import { ScreenshotHelper } from '../../utilities/ScreenshotHelper';
-import { generateWordReport, defaultWebReportTemplate } from '../../helpers/WordReportHelper';
+import { generateWordReport, defaultWebReportTemplate, WordReportData } from '../../helpers/WordReportHelper';
 import { LoggerFactory } from '../../core/logging/LoggerFactory';
 
 export interface WebWorldParameters {
-  env?: string;      // 'cert' | 'desa' | 'prod'
-  baseUrl?: string;  // opcional override
+  env?: string;      // cert | desa | prod
+  baseUrl?: string;  // override opcional
 }
 
 export class WebWorld {
-  // Playwright
   browser!: Browser;
   context!: BrowserContext;
   page!: Page;
 
-  // Facade
   private em!: ElementManager;
   private log = LoggerFactory.getLogger('WebWorld');
-
-  // Parámetros de Cucumber
   readonly parameters: WebWorldParameters;
 
   constructor(opts: IWorldOptions) {
     this.parameters = (opts.parameters as WebWorldParameters) || {};
-    // Carga config (JSON-only), merge con DefaultConfig
     ConfigManager.load(this.parameters.env);
-    if (this.parameters.baseUrl) {
-      ConfigManager.override({ baseUrl: this.parameters.baseUrl });
-    }
+    if (this.parameters.baseUrl) ConfigManager.override({ baseUrl: this.parameters.baseUrl });
   }
 
   /** ===== Ciclo de vida ===== **/
@@ -52,9 +45,9 @@ export class WebWorld {
     this.log.info('World cleaned up');
   }
 
-  /** ===== Accesores “seguros” ===== **/
+  /** ===== Accesores ===== **/
   cfg() { return ConfigManager.get(); }
-  elements() { return this.em; } // Para PageObjects que quieran usar EM
+  elements() { return this.em; }
 
   /** ===== Navegación / Interacciones ===== **/
   async gotoBase(path: string = '/') {
@@ -71,11 +64,11 @@ export class WebWorld {
   }
 
   /** ===== Waits / Validaciones ===== **/
- async urlIncludes(fragment: string | RegExp, timeout = 10000) {
-  await WaitStrategies.forUrlIncludes(this.page, fragment, timeout);
-}
+  async urlIncludes(fragment: string | RegExp, timeout = 10_000) {
+    await WaitStrategies.forUrlIncludes(this.page, fragment, timeout);
+  }
 
-  async expectVisibleByTestId(testId: string, timeout = 10000) {
+  async expectVisibleByTestId(testId: string, timeout = 10_000) {
     await WaitStrategies.toBeVisible(this.em.byTestId(testId), timeout);
   }
 
@@ -84,15 +77,9 @@ export class WebWorld {
     await ScreenshotHelper.capture(this.page, name);
   }
 
-  /**
-   * Genera reporte Word usando el mismo enfoque que API.
-   * @param data payload del reporte
-   * @param outPath ruta de salida .docx
-   * @param templatePath opcional; si no se pasa se usa el template por defecto
-   */
-  async generateWordReport(data: Parameters<typeof generateWordReport>[0], outPath: string, templatePath?: string) {
+  async generateWordReport(data: WordReportData, outPath: string, templatePath?: string) {
     const tpl = templatePath ?? defaultWebReportTemplate();
-    return await generateWordReport(data, tpl, outPath);
+    return generateWordReport(data, tpl, outPath);
   }
 }
 
