@@ -6,11 +6,15 @@ import { BrowserFactory } from '../../core/browsers/BrowserFactory';
 import { ElementManager } from '../../elements/ElementManager';
 import { WaitStrategies } from '../../elements/WaitStrategies';
 import { ScreenshotHelper } from '../../utilities/ScreenshotHelper';
-import { generateWordReport, defaultWebReportTemplate, WordReportData } from '../../helpers/WordReportHelper';
 import { LoggerFactory } from '../../core/logging/LoggerFactory';
+import {
+  generateWordReport,
+  defaultWebReportTemplate,
+  WordReportData,
+} from '../../helpers/WordReportHelper';
 
 export interface WebWorldParameters {
-  env?: string;      // cert | desa | prod
+  env?: string;      // 'cert' | 'desa' | 'prod'
   baseUrl?: string;  // override opcional
 }
 
@@ -53,12 +57,10 @@ export class WebWorld {
   async gotoBase(path: string = '/') {
     await BrowserFactory.gotoBaseUrl(this.page, path);
   }
-
   async typeByPlaceholder(placeholder: string, text: string, pressEnter = false) {
     await this.em.byPlaceholder(placeholder).fill(text);
     if (pressEnter) await this.page.keyboard.press('Enter');
   }
-
   async clickByText(text: string) {
     await this.em.byText(text).click();
   }
@@ -67,7 +69,6 @@ export class WebWorld {
   async urlIncludes(fragment: string | RegExp, timeout = 10_000) {
     await WaitStrategies.forUrlIncludes(this.page, fragment, timeout);
   }
-
   async expectVisibleByTestId(testId: string, timeout = 10_000) {
     await WaitStrategies.toBeVisible(this.em.byTestId(testId), timeout);
   }
@@ -83,4 +84,5 @@ export class WebWorld {
   }
 }
 
+// ¡MUY IMPORTANTE! ⇒ registra el World (igual que en API)
 setWorldConstructor(WebWorld);

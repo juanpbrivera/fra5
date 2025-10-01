@@ -13,6 +13,7 @@ export interface WordReportData {
 }
 
 export function defaultWebReportTemplate(): string {
+  // copia aquí el mismo template que usas en API o uno equivalente
   return path.resolve(__dirname, '../../templates/plantilla-reporte.docx');
 }
 
