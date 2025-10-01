@@ -6,12 +6,15 @@
     "types": "dist/index.d.ts",
     "files": [
         "dist/**/*",
-        "templates/"
+        "templates/",
+        "scripts/"
     ],
     "scripts": {
         "build": "tsc --project tsconfig.json",
         "build:watch": "tsc --project tsconfig.json --watch",
         "prepublishOnly": "npm run build",
+        "postinstall": "npm run build && node scripts/ensure-browser.js",
+        "ensure-browser": "node scripts/ensure-browser.js",
         "test": "npx playwright test"
     },
     "keywords": [],
