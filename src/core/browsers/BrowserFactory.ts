@@ -1,7 +1,7 @@
 import { chromium, firefox, webkit, Browser, BrowserContext, Page, BrowserType } from "@playwright/test";
-import { ConfigManager } from "@core/config/ConfigManager";
+import { ConfigManager } from "../config/ConfigManager";
 import { BrowserOptions } from "./BrowserOptions";
-import { LoggerFactory } from "@core/logging/LoggerFactory";
+import { LoggerFactory } from "../logging/LoggerFactory";
 
 
 export class BrowserFactory {

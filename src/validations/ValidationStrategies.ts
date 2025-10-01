@@ -1,5 +1,5 @@
 import { Page } from "@playwright/test";
-import { WaitStrategies } from "@elements/WaitStrategies";
+import { WaitStrategies } from "../elements/WaitStrategies";
 
 
 export class ValidationStrategies {

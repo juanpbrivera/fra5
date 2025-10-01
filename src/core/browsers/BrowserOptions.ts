@@ -1,5 +1,5 @@
 import { BrowserContextOptions } from "@playwright/test";
-import { BrowserName } from "@core/config/types";
+import { BrowserName } from "../config/types";
 
 
 export interface BrowserOptions {
