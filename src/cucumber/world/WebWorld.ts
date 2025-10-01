@@ -1,4 +1,4 @@
-import { IWorldOptions, setWorldConstructor } from '@cucumber/cucumber';
+import { IWorldOptions } from '@cucumber/cucumber';
 import { Browser, BrowserContext, Page } from '@playwright/test';
 
 import { ConfigManager } from '../../core/config/ConfigManager';
@@ -83,6 +83,3 @@ export class WebWorld {
     return generateWordReport(data, tpl, outPath);
   }
 }
-
-// ¡MUY IMPORTANTE! ⇒ registra el World (igual que en API)
-setWorldConstructor(WebWorld);
