@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// Framework5/src/scripts/test-runner.js
 const { spawn } = require('child_process');
 const path = require('path');
 
@@ -19,11 +18,14 @@ process.env.ENV = env;
 console.log(`🎯 Config: browser=${browser}, env=${env}`);
 
 // Ensure browser is installed
-const ensureBrowser = spawn('node', [
-  path.join(__dirname, 'ensure-browser.js')
-], {
+const frameworkDir = path.join(__dirname, '..');
+const ensureBrowserPath = path.join(__dirname, 'ensure-browser.js');
+
+const ensureBrowser = spawn('node', [ensureBrowserPath], {
+  cwd: frameworkDir,
   env: process.env,
-  stdio: 'inherit'
+  stdio: 'inherit',
+  shell: true
 });
 
 ensureBrowser.on('close', (code) => {
@@ -31,9 +33,13 @@ ensureBrowser.on('close', (code) => {
     process.exit(code);
   }
   
-  // Run cucumber with remaining args
+  // Run cucumber from the original working directory
   const cucumberArgs = args.filter(a => !a.includes('--browser=') && !a.includes('--env='));
-  const cucumber = spawn('npx', ['cucumber-js', '-p', 'default', ...cucumberArgs], {
+  
+  // Windows necesita .cmd para npx
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  
+  const cucumber = spawn(npxCmd, ['cucumber-js', '-p', 'default', ...cucumberArgs], {
     cwd: process.cwd(),
     env: process.env,
     stdio: 'inherit',
