@@ -1,10 +1,8 @@
-// Integración con Cucumber (World para Web)
+// Integración con Cucumber
 export { WebWorld } from './cucumber/world/WebWorld';
-export type { WebWorldParameters } from './cucumber/world/WebWorld';
 
-// Generación de Reporte Word (reutiliza docx-templates)
+// Generación de Reporte Word
 export { generateWordReport } from './helpers/WordReportHelper';
-export type { WordReportData } from './helpers/WordReportHelper';
 
-// "Interceptor"/reporting para Web (console/network/screenshot hooks)
+// Interceptor para reporting
 export * from './core/browsers/interceptors/ReportingInterceptor';
