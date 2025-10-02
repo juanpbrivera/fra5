@@ -1,5 +1,5 @@
-// Integración con Cucumber
-export { WebWorld } from './cucumber/world/WebWorld';
+// Integración con Cucumber - World en español
+export { AutomatizacionWeb } from './cucumber/world/AutomatizacionWeb';
 
 // Helper para reportes
 export { generateTestReport } from './cucumber/hooks/reportHelper';
