@@ -14,6 +14,35 @@ export async function generateWordReport(
       screenshotBase64 = imageBuffer.toString('base64');
     }
     
+    // Formatear pasos ejecutados
+    const formattedSteps = test.steps && test.steps.length > 0
+      ? test.steps.map((step: any, index: number) => 
+          `  ${index + 1}. ${step.name} - ${step.status.toUpperCase()}`
+        ).join('\n')
+      : null;
+    
+    // Formatear errores de página
+    const formattedPageErrors = test.pageErrors && test.pageErrors.length > 0
+      ? test.pageErrors.map((error: any) => 
+          `  • ${error.message}`
+        ).join('\n')
+      : null;
+    
+    // Formatear errores de consola (solo errores, no logs)
+    const formattedConsoleErrors = test.consoleLogs && test.consoleLogs.length > 0
+      ? test.consoleLogs
+          .filter((log: any) => log.type === 'error')
+          .map((log: any) => `  • ${log.text}`)
+          .join('\n')
+      : null;
+    
+    // Formatear fallos de red
+    const formattedNetworkFailures = test.networkFailures && test.networkFailures.length > 0
+      ? test.networkFailures.map((failure: any) => 
+          `  • ${failure.method} ${failure.url}: ${failure.failure}`
+        ).join('\n')
+      : null;
+    
     return {
       testName: test.scenarioName || test.testName || 'Sin nombre',
       suiteName: test.featureName || 'Suite Principal',
@@ -21,7 +50,16 @@ export async function generateWordReport(
       duration: test.duration || 0,
       errorMessage: test.errorMessage || test.validationErrors || null,
       screenshotPath: test.screenshot || null,
-      screenshotImage: screenshotBase64
+      screenshotImage: screenshotBase64,
+      webDetails: {
+        URL: test.url || 'No capturada',
+        BROWSER: test.browser || 'chromium',
+        VIEWPORT: '1920x1080',
+        STEPS: formattedSteps,
+        PAGE_ERRORS: formattedPageErrors,
+        CONSOLE_ERRORS: formattedConsoleErrors,
+        NETWORK_FAILURES: formattedNetworkFailures
+      }
     };
   });
 
@@ -33,12 +71,18 @@ export async function generateWordReport(
       duration: tests.reduce((sum, t) => sum + t.duration, 0),
       environment: process.env.ENV || 'cert',
       browser: process.env.BROWSER || 'chromium',
-      executionDate: new Date().toLocaleDateString('es-ES', {
-        year: 'numeric', month: 'long', day: 'numeric',
-        hour: '2-digit', minute: '2-digit'
+      executionDate: new Date().toLocaleString('es-PE', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
       })
     },
-    testSuites: groupBySuite(tests)
+    testSuites: groupBySuite(tests),
+    failedTests: tests.filter(t => t.status === 'failed')
   };
 
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte-web.docx');
