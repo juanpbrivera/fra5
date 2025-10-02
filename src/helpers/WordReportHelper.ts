@@ -7,41 +7,20 @@ export async function generateWordReport(
   outputPath: string
 ): Promise<void> {
   const tests = webTests.map((test) => {
-    // Si hay screenshot, convertirlo a base64 para incluirlo en Word
+    // Si hay screenshot, convertirlo a base64 
     let screenshotBase64 = null;
-    if (test.screenshot && fs.existsSync(test.screenshot)) {
-      const imageBuffer = fs.readFileSync(test.screenshot);
-      screenshotBase64 = imageBuffer.toString('base64');
+    if (test.screenshot) {
+      // Verificar si es ruta relativa o absoluta
+      let screenshotPath = test.screenshot;
+      if (!path.isAbsolute(screenshotPath)) {
+        screenshotPath = path.join(process.cwd(), test.screenshot);
+      }
+      
+      if (fs.existsSync(screenshotPath)) {
+        const imageBuffer = fs.readFileSync(screenshotPath);
+        screenshotBase64 = imageBuffer.toString('base64');
+      }
     }
-    
-    // Formatear pasos ejecutados
-    const formattedSteps = test.steps && test.steps.length > 0
-      ? test.steps.map((step: any, index: number) => 
-          `  ${index + 1}. ${step.name} - ${step.status.toUpperCase()}`
-        ).join('\n')
-      : null;
-    
-    // Formatear errores de página
-    const formattedPageErrors = test.pageErrors && test.pageErrors.length > 0
-      ? test.pageErrors.map((error: any) => 
-          `  • ${error.message}`
-        ).join('\n')
-      : null;
-    
-    // Formatear errores de consola (solo errores, no logs)
-    const formattedConsoleErrors = test.consoleLogs && test.consoleLogs.length > 0
-      ? test.consoleLogs
-          .filter((log: any) => log.type === 'error')
-          .map((log: any) => `  • ${log.text}`)
-          .join('\n')
-      : null;
-    
-    // Formatear fallos de red
-    const formattedNetworkFailures = test.networkFailures && test.networkFailures.length > 0
-      ? test.networkFailures.map((failure: any) => 
-          `  • ${failure.method} ${failure.url}: ${failure.failure}`
-        ).join('\n')
-      : null;
     
     return {
       testName: test.scenarioName || test.testName || 'Sin nombre',
@@ -50,16 +29,7 @@ export async function generateWordReport(
       duration: test.duration || 0,
       errorMessage: test.errorMessage || test.validationErrors || null,
       screenshotPath: test.screenshot || null,
-      screenshotImage: screenshotBase64,
-      webDetails: {
-        URL: test.url || 'No capturada',
-        BROWSER: test.browser || 'chromium',
-        VIEWPORT: '1366x768',
-        STEPS: formattedSteps,
-        PAGE_ERRORS: formattedPageErrors,
-        CONSOLE_ERRORS: formattedConsoleErrors,
-        NETWORK_FAILURES: formattedNetworkFailures
-      }
+      screenshotImage: screenshotBase64
     };
   });
 
@@ -71,23 +41,21 @@ export async function generateWordReport(
       duration: tests.reduce((sum, t) => sum + t.duration, 0),
       environment: process.env.ENV || 'cert',
       browser: process.env.BROWSER || 'chromium',
-      executionDate: new Date().toLocaleString('es-PE', {
-        weekday: 'long',
+      executionDate: new Date().toLocaleDateString('es-ES', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        minute: '2-digit'
       })
     },
-    testSuites: groupBySuite(tests),
-    failedTests: tests.filter(t => t.status === 'failed')
+    testSuites: groupBySuite(tests)
   };
 
+  // Buscar template
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte-web.docx');
-  
   let actualTemplatePath = templatePath;
+  
   if (!fs.existsSync(templatePath)) {
     const altTemplatePath = path.join(__dirname, '..', '..', '..', 'templates', 'plantilla-reporte-web.docx');
     if (fs.existsSync(altTemplatePath)) {
@@ -98,32 +66,34 @@ export async function generateWordReport(
   }
 
   const template = fs.readFileSync(actualTemplatePath);
+  
+  // Generar reporte - formato correcto para docx-templates
   const buffer = await createReport({
     template,
     data: reportData,
     cmdDelimiter: ['{{', '}}'],
     additionalJsContext: {
-      // Helper para insertar imágenes con máxima calidad y tamaño
       insertImage: (base64String: string) => {
         if (!base64String) return null;
         
-        // Configuración para máxima calidad en Word
+        // Formato correcto para docx-templates v4
         return {
-          width: 9,      // 9 pulgadas de ancho (casi toda la página)
-          height: 5,     // 5 pulgadas de alto (proporción 16:9)
-          data: base64String,
-          extension: '.png',
-          altText: 'Screenshot del test'
+          width: 6,           // pulgadas
+          height: 4,          // pulgadas
+          data: base64String, // base64 string
+          extension: '.png'
         };
       }
     }
   });
 
+  // Asegurar directorio
   const dir = path.dirname(outputPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
   
+  // Escribir archivo
   fs.writeFileSync(outputPath, buffer);
 }
 
