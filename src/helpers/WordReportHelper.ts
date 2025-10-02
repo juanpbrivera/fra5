@@ -35,8 +35,8 @@ export async function generateWordReport(
       const template = fs.readFileSync(altTemplatePath);
       const buffer = await createReport({
         template,
-        data: reportData
-        // NO especificar cmdDelimiter - usa el default
+        data: reportData,
+        cmdDelimiter: ['{', '}'] // IMPORTANTE: especificar que usamos una sola llave
       });
 
       const dir = path.dirname(outputPath);
@@ -54,8 +54,8 @@ export async function generateWordReport(
   const template = fs.readFileSync(templatePath);
   const buffer = await createReport({
     template,
-    data: reportData
-    // NO especificar cmdDelimiter - usa el default
+    data: reportData,
+    cmdDelimiter: ['{', '}'] // IMPORTANTE: especificar que usamos una sola llave
   });
 
   const dir = path.dirname(outputPath);
