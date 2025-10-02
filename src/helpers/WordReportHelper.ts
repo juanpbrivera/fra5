@@ -9,16 +9,16 @@ export async function generateWordReport(
   const tests = webTests.map((test) => ({
     testName: test.scenarioName || test.testName || 'Sin nombre',
     suiteName: test.featureName || 'Suite Principal',
-    status: test.status === 'passed' ? 'EXITOSO' : 'FALLIDO',
+    status: test.status === 'passed' ? 'PASSED' : 'FAILED',
     duration: test.duration || 0,
-    errorMessage: test.errorMessage || test.validationErrors || ''
+    errorMessage: test.errorMessage || test.validationErrors || null
   }));
 
   const reportData = {
     summary: {
       total: tests.length,
-      passed: tests.filter(t => t.status === 'EXITOSO').length,
-      failed: tests.filter(t => t.status === 'FALLIDO').length,
+      passed: tests.filter(t => t.status === 'PASSED').length,
+      failed: tests.filter(t => t.status === 'FAILED').length,
       duration: tests.reduce((sum, t) => sum + t.duration, 0),
       environment: process.env.ENV || 'cert',
       browser: process.env.BROWSER || 'chromium',
@@ -35,8 +35,8 @@ export async function generateWordReport(
       const template = fs.readFileSync(altTemplatePath);
       const buffer = await createReport({
         template,
-        data: reportData,
-        cmdDelimiter: ['{', '}'] // IMPORTANTE: especificar que usamos una sola llave
+        data: reportData
+        // NO especificar cmdDelimiter - dejar que use el default
       });
 
       const dir = path.dirname(outputPath);
@@ -54,8 +54,8 @@ export async function generateWordReport(
   const template = fs.readFileSync(templatePath);
   const buffer = await createReport({
     template,
-    data: reportData,
-    cmdDelimiter: ['{', '}'] // IMPORTANTE: especificar que usamos una sola llave
+    data: reportData
+    // NO especificar cmdDelimiter - dejar que use el default
   });
 
   const dir = path.dirname(outputPath);
