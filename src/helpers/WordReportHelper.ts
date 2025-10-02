@@ -6,13 +6,24 @@ export async function generateWordReport(
   webTests: any[], 
   outputPath: string
 ): Promise<void> {
-  const tests = webTests.map((test) => ({
-    testName: test.scenarioName || test.testName || 'Sin nombre',
-    suiteName: test.featureName || 'Suite Principal',
-    status: test.status === 'passed' ? 'passed' : 'failed',  // Minúsculas como en API
-    duration: test.duration || 0,
-    errorMessage: test.errorMessage || test.validationErrors || null
-  }));
+  const tests = webTests.map((test) => {
+    // Si hay screenshot, convertirlo a base64 para incluirlo en Word
+    let screenshotBase64 = null;
+    if (test.screenshot && fs.existsSync(test.screenshot)) {
+      const imageBuffer = fs.readFileSync(test.screenshot);
+      screenshotBase64 = imageBuffer.toString('base64');
+    }
+    
+    return {
+      testName: test.scenarioName || test.testName || 'Sin nombre',
+      suiteName: test.featureName || 'Suite Principal',
+      status: test.status === 'passed' ? 'passed' : 'failed',
+      duration: test.duration || 0,
+      errorMessage: test.errorMessage || test.validationErrors || null,
+      screenshotPath: test.screenshot || null,
+      screenshotImage: screenshotBase64 // Imagen en base64 para incluir en Word
+    };
+  });
 
   const reportData = {
     summary: {
@@ -39,7 +50,20 @@ export async function generateWordReport(
       const buffer = await createReport({
         template,
         data: reportData,
-        cmdDelimiter: ['{{', '}}']  // IMPORTANTE: igual que API
+        cmdDelimiter: ['{{', '}}'],
+        additionalJsContext: {
+          // Helper para insertar imágenes
+          insertImage: (base64: string) => {
+            if (!base64) return '';
+            return {
+              _type: 'image',
+              source: Buffer.from(base64, 'base64'),
+              format: 'png',
+              width: 600,  // Ancho en píxeles
+              height: 400  // Alto en píxeles
+            };
+          }
+        }
       });
 
       const dir = path.dirname(outputPath);
@@ -58,7 +82,19 @@ export async function generateWordReport(
   const buffer = await createReport({
     template,
     data: reportData,
-    cmdDelimiter: ['{{', '}}']  // IMPORTANTE: igual que API
+    cmdDelimiter: ['{{', '}}'],
+    additionalJsContext: {
+      insertImage: (base64: string) => {
+        if (!base64) return '';
+        return {
+          _type: 'image',
+          source: Buffer.from(base64, 'base64'),
+          format: 'png',
+          width: 600,
+          height: 400
+        };
+      }
+    }
   });
 
   const dir = path.dirname(outputPath);

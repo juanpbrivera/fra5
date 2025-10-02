@@ -38,13 +38,16 @@ export class ReportingInterceptor {
       fs.mkdirSync(artifactsDir, { recursive: true });
     }
     
-    const screenshotPath = `artifacts/${name}-${Date.now()}.png`;
+    const filename = `${name}-${Date.now()}.png`;
+    const screenshotPath = path.join('artifacts', filename); // Ruta relativa
+    const fullPath = path.join(process.cwd(), screenshotPath);
+    
     await page.screenshot({ 
-      path: screenshotPath, 
+      path: fullPath, 
       fullPage: true 
     });
     
-    this.currentTest.screenshot = screenshotPath;
+    this.currentTest.screenshot = screenshotPath; // Guardar ruta relativa
     return screenshotPath;
   }
 
@@ -85,6 +88,21 @@ export class ReportingInterceptor {
         timestamp: new Date().toISOString()
       });
     });
+
+    // Captura respuestas de red con errores (opcional)
+    page.on('response', response => {
+      if (response.status() >= 400) {
+        if (!this.currentTest.httpErrors) {
+          this.currentTest.httpErrors = [];
+        }
+        this.currentTest.httpErrors.push({
+          url: response.url(),
+          status: response.status(),
+          statusText: response.statusText(),
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
   }
 
   static endScenario(status: 'passed' | 'failed', errorMessage?: string): void {
@@ -93,6 +111,16 @@ export class ReportingInterceptor {
     this.currentTest.status = status;
     this.currentTest.duration = endTime - (this.currentTest.startTime || endTime);
     this.currentTest.errorMessage = errorMessage;
+    this.currentTest.endTime = endTime;
+    
+    // Añadir URL final si está disponible
+    if (this.currentTest.page && !this.currentTest.page.isClosed()) {
+      try {
+        this.currentTest.url = this.currentTest.page.url();
+      } catch (e) {
+        // La página puede estar cerrada
+      }
+    }
     
     this.capturedTests.push({ ...this.currentTest });
     
@@ -109,5 +137,64 @@ export class ReportingInterceptor {
   static reset(): void {
     this.capturedTests = [];
     this.currentTest = {};
+  }
+
+  // Método auxiliar para capturar errores de manera segura
+  static captureError(error: any): void {
+    if (!this.currentTest.errors) {
+      this.currentTest.errors = [];
+    }
+    
+    const errorInfo = {
+      message: error?.message || String(error),
+      stack: error?.stack,
+      timestamp: new Date().toISOString()
+    };
+    
+    this.currentTest.errors.push(errorInfo);
+  }
+
+  // Método para obtener estadísticas del test actual
+  static getCurrentTestStats(): any {
+    return {
+      scenarioName: this.currentTest.scenarioName,
+      duration: Date.now() - (this.currentTest.startTime || Date.now()),
+      stepsExecuted: this.currentTest.steps?.length || 0,
+      errors: this.currentTest.errors?.length || 0,
+      consoleLogs: this.currentTest.consoleLogs?.length || 0
+    };
+  }
+
+  // Método para exportar datos en formato JSON
+  static exportToJSON(filePath?: string): string {
+    const data = {
+      summary: {
+        total: this.capturedTests.length,
+        passed: this.capturedTests.filter(t => t.status === 'passed').length,
+        failed: this.capturedTests.filter(t => t.status === 'failed').length,
+        executedAt: new Date().toISOString()
+      },
+      tests: this.capturedTests
+    };
+    
+    const jsonString = JSON.stringify(data, null, 2);
+    
+    if (filePath) {
+      fs.writeFileSync(filePath, jsonString, 'utf8');
+    }
+    
+    return jsonString;
+  }
+}
+
+// Exportar funciones helper para uso directo
+export function attachReporting(page: Page, scenarioName: string): void {
+  ReportingInterceptor.startScenario(scenarioName);
+  ReportingInterceptor.attachToPage(page);
+}
+
+export async function captureOnFailure(page: Page, failed: boolean, name: string): Promise<void> {
+  if (failed) {
+    await ReportingInterceptor.captureScreenshot(page, name);
   }
 }
