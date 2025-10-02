@@ -1,4 +1,3 @@
-// Framework5/src/cucumber/hooks/reportHelper.ts
 import { generateWordReport } from '../../helpers/WordReportHelper';
 import { ReportingInterceptor } from '../../core/browsers/interceptors/ReportingInterceptor';
 import { LoggerFactory } from '../../core/logging/LoggerFactory';

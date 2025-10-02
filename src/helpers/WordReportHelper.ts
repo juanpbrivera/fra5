@@ -54,7 +54,7 @@ export async function generateWordReport(
       webDetails: {
         URL: test.url || 'No capturada',
         BROWSER: test.browser || 'chromium',
-        VIEWPORT: '1920x1080',
+        VIEWPORT: '1366x768',
         STEPS: formattedSteps,
         PAGE_ERRORS: formattedPageErrors,
         CONSOLE_ERRORS: formattedConsoleErrors,

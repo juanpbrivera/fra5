@@ -44,7 +44,7 @@ export class ReportingInterceptor {
     const height = viewport?.height || 768;
     
     // Configurar para máxima calidad
-    await page.setViewportSize({ width: 1920, height: 1080 });
+    // await page.setViewportSize({ width: 1920, height: 1080 });
     
     const filename = `${name}-${Date.now()}.png`;
     const screenshotPath = path.join('artifacts', filename);
