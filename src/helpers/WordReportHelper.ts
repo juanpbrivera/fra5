@@ -3,25 +3,27 @@ import * as path from 'path';
 import createReport from 'docx-templates';
 
 export async function generateWordReport(
-  webTests: any[], 
+  webTests: any[],
   outputPath: string
 ): Promise<void> {
   const tests = webTests.map((test) => {
     // Si hay screenshot, convertirlo a base64 
     let screenshotBase64 = null;
     if (test.screenshot) {
-      // Verificar si es ruta relativa o absoluta
       let screenshotPath = test.screenshot;
       if (!path.isAbsolute(screenshotPath)) {
         screenshotPath = path.join(process.cwd(), test.screenshot);
       }
-      
+
       if (fs.existsSync(screenshotPath)) {
         const imageBuffer = fs.readFileSync(screenshotPath);
         screenshotBase64 = imageBuffer.toString('base64');
+        console.log(`✅ Screenshot encontrado y convertido: ${test.screenshot}, base64 length: ${screenshotBase64.length}`);
+      } else {
+        console.log(`❌ Screenshot no encontrado: ${screenshotPath}`);
       }
     }
-    
+
     return {
       testName: test.scenarioName || test.testName || 'Sin nombre',
       suiteName: test.featureName || 'Suite Principal',
@@ -55,7 +57,7 @@ export async function generateWordReport(
   // Buscar template
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte-web.docx');
   let actualTemplatePath = templatePath;
-  
+
   if (!fs.existsSync(templatePath)) {
     const altTemplatePath = path.join(__dirname, '..', '..', '..', 'templates', 'plantilla-reporte-web.docx');
     if (fs.existsSync(altTemplatePath)) {
@@ -66,7 +68,7 @@ export async function generateWordReport(
   }
 
   const template = fs.readFileSync(actualTemplatePath);
-  
+
   // Generar reporte - formato correcto para docx-templates
   const buffer = await createReport({
     template,
@@ -75,7 +77,7 @@ export async function generateWordReport(
     additionalJsContext: {
       insertImage: (base64String: string) => {
         if (!base64String) return null;
-        
+
         // Formato correcto para docx-templates v4
         return {
           width: 6,           // pulgadas
@@ -92,14 +94,14 @@ export async function generateWordReport(
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  
+
   // Escribir archivo
   fs.writeFileSync(outputPath, buffer);
 }
 
 function groupBySuite(tests: any[]) {
   const suiteMap = new Map<string, any[]>();
-  
+
   tests.forEach(test => {
     const suite = test.suiteName || 'Suite Principal';
     if (!suiteMap.has(suite)) {
@@ -107,7 +109,7 @@ function groupBySuite(tests: any[]) {
     }
     suiteMap.get(suite)!.push(test);
   });
-  
+
   return Array.from(suiteMap.entries()).map(([suiteName, tests]) => ({
     suiteName,
     tests
