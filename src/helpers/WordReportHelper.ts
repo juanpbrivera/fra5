@@ -9,7 +9,7 @@ export async function generateWordReport(
   const tests = webTests.map((test) => ({
     testName: test.scenarioName || test.testName || 'Sin nombre',
     suiteName: test.featureName || 'Suite Principal',
-    status: test.status === 'passed' ? 'PASSED' : 'FAILED',
+    status: test.status === 'passed' ? 'passed' : 'failed',  // Minúsculas como en API
     duration: test.duration || 0,
     errorMessage: test.errorMessage || test.validationErrors || null
   }));
@@ -17,12 +17,15 @@ export async function generateWordReport(
   const reportData = {
     summary: {
       total: tests.length,
-      passed: tests.filter(t => t.status === 'PASSED').length,
-      failed: tests.filter(t => t.status === 'FAILED').length,
+      passed: tests.filter(t => t.status === 'passed').length,
+      failed: tests.filter(t => t.status === 'failed').length,
       duration: tests.reduce((sum, t) => sum + t.duration, 0),
       environment: process.env.ENV || 'cert',
       browser: process.env.BROWSER || 'chromium',
-      executionDate: new Date().toLocaleString('es-PE')
+      executionDate: new Date().toLocaleDateString('es-ES', {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      })
     },
     testSuites: groupBySuite(tests)
   };
@@ -35,8 +38,8 @@ export async function generateWordReport(
       const template = fs.readFileSync(altTemplatePath);
       const buffer = await createReport({
         template,
-        data: reportData
-        // NO especificar cmdDelimiter - dejar que use el default
+        data: reportData,
+        cmdDelimiter: ['{{', '}}']  // IMPORTANTE: igual que API
       });
 
       const dir = path.dirname(outputPath);
@@ -54,8 +57,8 @@ export async function generateWordReport(
   const template = fs.readFileSync(templatePath);
   const buffer = await createReport({
     template,
-    data: reportData
-    // NO especificar cmdDelimiter - dejar que use el default
+    data: reportData,
+    cmdDelimiter: ['{{', '}}']  // IMPORTANTE: igual que API
   });
 
   const dir = path.dirname(outputPath);

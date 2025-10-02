@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -16,6 +17,30 @@ process.env.BROWSER = browser;
 process.env.ENV = env;
 
 console.log(`🎯 Config: browser=${browser}, env=${env}`);
+
+// Limpiar carpetas antes de ejecutar tests
+function cleanDirectories() {
+  const dirs = ['artifacts', 'reports'];
+  
+  dirs.forEach(dir => {
+    const dirPath = path.join(process.cwd(), dir);
+    if (fs.existsSync(dirPath)) {
+      fs.rmSync(dirPath, { recursive: true, force: true });
+      console.log(`🧹 Limpiado: ${dir}/`);
+    }
+  });
+  
+  // Recrear las carpetas vacías
+  dirs.forEach(dir => {
+    const dirPath = path.join(process.cwd(), dir);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  });
+}
+
+// Limpiar antes de ejecutar
+cleanDirectories();
 
 // Ensure browser is installed
 const frameworkDir = path.join(__dirname, '..');
