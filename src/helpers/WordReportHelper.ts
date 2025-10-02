@@ -43,12 +43,12 @@ export async function generateWordReport(
 
   // Busca la plantilla relativa a este archivo
   // Este archivo está en dist/helpers/WordReportHelper.js
-  // La plantilla está en templates/plantilla-reporte.docx
-  const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte.docx');
+  // La plantilla está en templates/plantilla-reporte-web.docx
+  const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte-web.docx');
 
   if (!fs.existsSync(templatePath)) {
     // Si no existe, intenta buscar en el directorio src
-    const altTemplatePath = path.join(__dirname, '..', '..', '..', 'templates', 'plantilla-reporte.docx');
+    const altTemplatePath = path.join(__dirname, '..', '..', '..', 'templates', 'plantilla-reporte-web.docx');
     if (fs.existsSync(altTemplatePath)) {
       const template = fs.readFileSync(altTemplatePath);
       const buffer = await createReport({
