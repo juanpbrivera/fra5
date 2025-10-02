@@ -11,7 +11,7 @@ export async function generateWordReport(
     suiteName: test.featureName || 'Suite Principal',
     status: test.status === 'passed' ? 'EXITOSO' : 'FALLIDO',
     duration: test.duration || 0,
-    errorMessage: test.errorMessage || test.validationErrors || null
+    errorMessage: test.errorMessage || test.validationErrors || ''
   }));
 
   const reportData = {
@@ -35,8 +35,8 @@ export async function generateWordReport(
       const template = fs.readFileSync(altTemplatePath);
       const buffer = await createReport({
         template,
-        data: reportData,
-        cmdDelimiter: ['{{', '}}']  // Usa {{ }} para delimitadores
+        data: reportData
+        // NO especificar cmdDelimiter - usa el default
       });
 
       const dir = path.dirname(outputPath);
@@ -54,8 +54,8 @@ export async function generateWordReport(
   const template = fs.readFileSync(templatePath);
   const buffer = await createReport({
     template,
-    data: reportData,
-    cmdDelimiter: ['{{', '}}']
+    data: reportData
+    // NO especificar cmdDelimiter - usa el default
   });
 
   const dir = path.dirname(outputPath);
