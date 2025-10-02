@@ -1,8 +1,8 @@
 // Integración con Cucumber
 export { WebWorld } from './cucumber/world/WebWorld';
 
-// Hooks automáticos para tests
-export { TestHooks } from './cucumber/hooks/TestHooks';
+// Helper para reportes
+export { generateTestReport } from './cucumber/hooks/reportHelper';
 
 // Generación de Reporte Word
 export { generateWordReport } from './helpers/WordReportHelper';
