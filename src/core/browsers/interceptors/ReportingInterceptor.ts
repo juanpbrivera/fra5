@@ -1,4 +1,6 @@
 import { Page } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class ReportingInterceptor {
   private static capturedTests: any[] = [];
@@ -30,6 +32,12 @@ export class ReportingInterceptor {
   }
 
   static async captureScreenshot(page: Page, name: string): Promise<string> {
+    // Asegurar que el directorio existe
+    const artifactsDir = path.join(process.cwd(), 'artifacts');
+    if (!fs.existsSync(artifactsDir)) {
+      fs.mkdirSync(artifactsDir, { recursive: true });
+    }
+    
     const screenshotPath = `artifacts/${name}-${Date.now()}.png`;
     await page.screenshot({ 
       path: screenshotPath, 
@@ -43,6 +51,9 @@ export class ReportingInterceptor {
   static attachToPage(page: Page): void {
     // Captura console logs
     page.on('console', msg => {
+      if (!this.currentTest.consoleLogs) {
+        this.currentTest.consoleLogs = [];
+      }
       this.currentTest.consoleLogs.push({
         type: msg.type(),
         text: msg.text(),
@@ -52,6 +63,9 @@ export class ReportingInterceptor {
 
     // Captura errores de página
     page.on('pageerror', error => {
+      if (!this.currentTest.pageErrors) {
+        this.currentTest.pageErrors = [];
+      }
       this.currentTest.pageErrors.push({
         message: error.message,
         stack: error.stack,
@@ -61,6 +75,9 @@ export class ReportingInterceptor {
 
     // Captura fallos de red
     page.on('requestfailed', request => {
+      if (!this.currentTest.networkFailures) {
+        this.currentTest.networkFailures = [];
+      }
       this.currentTest.networkFailures.push({
         url: request.url(),
         method: request.method(),

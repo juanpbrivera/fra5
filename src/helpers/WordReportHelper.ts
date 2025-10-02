@@ -41,12 +41,32 @@ export async function generateWordReport(
     failedTests: tests.filter(t => t.status === 'failed')
   };
 
-  // Busca la plantilla en el paquete del framework
-  const pkgRoot = path.dirname(require.resolve('web-continuous-testing-framework-v1/package.json'));
-  const templatePath = path.join(pkgRoot, 'templates', 'plantilla-reporte-web.docx');
+  // Busca la plantilla relativa a este archivo
+  // Este archivo está en dist/helpers/WordReportHelper.js
+  // La plantilla está en templates/plantilla-reporte.docx
+  const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte.docx');
 
   if (!fs.existsSync(templatePath)) {
-    throw new Error(`Template no encontrada en: ${templatePath}`);
+    // Si no existe, intenta buscar en el directorio src
+    const altTemplatePath = path.join(__dirname, '..', '..', '..', 'templates', 'plantilla-reporte.docx');
+    if (fs.existsSync(altTemplatePath)) {
+      const template = fs.readFileSync(altTemplatePath);
+      const buffer = await createReport({
+        template, 
+        data: reportData,
+        cmdDelimiter: ['{{', '}}']
+      });
+
+      const dir = path.dirname(outputPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      fs.writeFileSync(outputPath, buffer);
+      return;
+    }
+    
+    throw new Error(`Template no encontrada. Buscada en: ${templatePath} y ${altTemplatePath}`);
   }
 
   const template = fs.readFileSync(templatePath);
