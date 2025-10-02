@@ -43,55 +43,32 @@ export async function generateWordReport(
 
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte-web.docx');
   
+  let actualTemplatePath = templatePath;
   if (!fs.existsSync(templatePath)) {
     const altTemplatePath = path.join(__dirname, '..', '..', '..', 'templates', 'plantilla-reporte-web.docx');
     if (fs.existsSync(altTemplatePath)) {
-      const template = fs.readFileSync(altTemplatePath);
-      const buffer = await createReport({
-        template,
-        data: reportData,
-        cmdDelimiter: ['{{', '}}'],
-        additionalJsContext: {
-          // Helper para insertar imágenes
-          insertImage: (base64: string) => {
-            if (!base64) return '';
-            return {
-              _type: 'image',
-              source: Buffer.from(base64, 'base64'),
-              format: 'png',
-              width: 600,  // Ancho en píxeles
-              height: 400  // Alto en píxeles
-            };
-          }
-        }
-      });
-
-      const dir = path.dirname(outputPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      
-      fs.writeFileSync(outputPath, buffer);
-      return;
+      actualTemplatePath = altTemplatePath;
+    } else {
+      throw new Error(`Template no encontrada en: ${templatePath}`);
     }
-    
-    throw new Error(`Template no encontrada en: ${templatePath}`);
   }
 
-  const template = fs.readFileSync(templatePath);
+  const template = fs.readFileSync(actualTemplatePath);
   const buffer = await createReport({
     template,
     data: reportData,
     cmdDelimiter: ['{{', '}}'],
     additionalJsContext: {
-      insertImage: (base64: string) => {
-        if (!base64) return '';
+      // Helper para insertar imágenes - formato correcto para docx-templates
+      insertImage: (base64String: string) => {
+        if (!base64String) return null;
+        
+        // docx-templates espera este formato específico
         return {
-          _type: 'image',
-          source: Buffer.from(base64, 'base64'),
-          format: 'png',
-          width: 600,
-          height: 400
+          width: 6,  // Ancho en pulgadas
+          height: 4, // Alto en pulgadas  
+          data: base64String, // String base64 directamente
+          extension: '.png'
         };
       }
     }
