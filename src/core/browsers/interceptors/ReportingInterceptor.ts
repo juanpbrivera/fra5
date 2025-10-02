@@ -38,16 +38,32 @@ export class ReportingInterceptor {
       fs.mkdirSync(artifactsDir, { recursive: true });
     }
     
+    // Obtener el viewport actual
+    const viewport = page.viewportSize();
+    const width = viewport?.width || 1366;
+    const height = viewport?.height || 768;
+    
+    // Configurar para máxima calidad
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    
     const filename = `${name}-${Date.now()}.png`;
-    const screenshotPath = path.join('artifacts', filename); // Ruta relativa
+    const screenshotPath = path.join('artifacts', filename);
     const fullPath = path.join(process.cwd(), screenshotPath);
     
+    // Captura con máxima calidad PNG
     await page.screenshot({ 
-      path: fullPath, 
-      fullPage: true 
+      path: fullPath,
+      fullPage: false,
+      type: 'png',
+      animations: 'disabled',
+      scale: 'device', // Usa la escala del dispositivo para mejor calidad
+      caret: 'hide'
     });
     
-    this.currentTest.screenshot = screenshotPath; // Guardar ruta relativa
+    // Restaurar viewport original
+    await page.setViewportSize({ width, height });
+    
+    this.currentTest.screenshot = screenshotPath;
     return screenshotPath;
   }
 

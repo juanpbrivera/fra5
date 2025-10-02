@@ -21,7 +21,7 @@ export async function generateWordReport(
       duration: test.duration || 0,
       errorMessage: test.errorMessage || test.validationErrors || null,
       screenshotPath: test.screenshot || null,
-      screenshotImage: screenshotBase64 // Imagen en base64 para incluir en Word
+      screenshotImage: screenshotBase64
     };
   });
 
@@ -59,16 +59,17 @@ export async function generateWordReport(
     data: reportData,
     cmdDelimiter: ['{{', '}}'],
     additionalJsContext: {
-      // Helper para insertar imágenes - formato correcto para docx-templates
+      // Helper para insertar imágenes con máxima calidad y tamaño
       insertImage: (base64String: string) => {
         if (!base64String) return null;
         
-        // docx-templates espera este formato específico
+        // Configuración para máxima calidad en Word
         return {
-          width: 6,  // Ancho en pulgadas
-          height: 4, // Alto en pulgadas  
-          data: base64String, // String base64 directamente
-          extension: '.png'
+          width: 9,      // 9 pulgadas de ancho (casi toda la página)
+          height: 5,     // 5 pulgadas de alto (proporción 16:9)
+          data: base64String,
+          extension: '.png',
+          altText: 'Screenshot del test'
         };
       }
     }
