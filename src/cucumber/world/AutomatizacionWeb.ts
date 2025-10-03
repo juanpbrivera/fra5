@@ -331,6 +331,3 @@ export class AutomatizacionWeb {
     return ConfigManager.get();
   }
 }
-
-// Registrar el World para Cucumber
-setWorldConstructor(AutomatizacionWeb);
