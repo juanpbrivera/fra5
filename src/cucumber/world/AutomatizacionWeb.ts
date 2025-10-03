@@ -6,6 +6,8 @@ import { ElementManager } from '../../elements/ElementManager';
 import { WaitStrategies } from '../../elements/WaitStrategies';
 import { ScreenshotHelper } from '../../utilities/ScreenshotHelper';
 import { LoggerFactory } from '../../core/logging/LoggerFactory';
+import { ReportingInterceptor } from '../../core/browsers/interceptors/ReportingInterceptor';
+
 // import { generateWordReport } from '../../helpers/WordReportHelper'; // Comentado hasta que se defina correctamente
 
 export interface ParametrosAutomatizacion {
@@ -52,6 +54,7 @@ export class AutomatizacionWeb {
     this.contexto = context;
     this.pagina = page;
     this.gestor = new ElementManager(page);
+    ReportingInterceptor.attachToPage(this.pagina);
     this.log.info('Automatización Web iniciada');
   }
 
