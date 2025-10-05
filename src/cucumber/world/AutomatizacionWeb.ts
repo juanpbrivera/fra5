@@ -1,5 +1,5 @@
 import { IWorldOptions, setWorldConstructor } from '@cucumber/cucumber';
-import { Browser, BrowserContext, Page } from '@playwright/test';
+import { Browser, BrowserContext, Page, Locator } from '@playwright/test';
 import { ConfigManager } from '../../core/config/ConfigManager';
 import { BrowserFactory } from '../../core/browsers/BrowserFactory';
 import { ElementManager } from '../../elements/ElementManager';
@@ -8,14 +8,11 @@ import { ScreenshotHelper } from '../../utilities/ScreenshotHelper';
 import { LoggerFactory } from '../../core/logging/LoggerFactory';
 import { ReportingInterceptor } from '../../core/browsers/interceptors/ReportingInterceptor';
 
-// import { generateWordReport } from '../../helpers/WordReportHelper'; // Comentado hasta que se defina correctamente
-
 export interface ParametrosAutomatizacion {
-    ambiente?: string;      // 'cert' | 'desa' | 'prod'
-    urlBase?: string;       // override opcional
+    ambiente?: string;
+    urlBase?: string;
 }
 
-// Definir el tipo WordReportData aquí si no está exportado
 export interface WordReportData {
     scenario: string;
     status: 'PASSED' | 'FAILED';
@@ -46,6 +43,17 @@ export class AutomatizacionWeb {
         }
     }
 
+    // ===== MÉTODO HELPER PARA XPATH =====
+    
+    private obtenerLocator(selector: string): Locator {
+        // Si empieza con // o xpath: es XPath
+        if (selector.startsWith('//') || selector.startsWith('xpath=')) {
+            return this.pagina.locator(selector);
+        }
+        // Si no, usar el gestor normal (CSS)
+        return this.gestor.css(selector);
+    }
+
     // ===== CICLO DE VIDA =====
 
     async iniciar() {
@@ -67,20 +75,15 @@ export class AutomatizacionWeb {
     // ===== MÉTODOS PARA HOOKS SIMPLIFICADOS =====
 
     async iniciarEscenario(scenario: any): Promise<void> {
-        // Iniciar captura del escenario
         ReportingInterceptor.startScenario(
             scenario.pickle.name,
             scenario.gherkinDocument.feature?.name
         );
-
-        // Iniciar navegador y configuración
         await this.iniciar();
     }
 
     async finalizarEscenario(scenario: any, Status: any): Promise<void> {
-        // Capturar screenshot si falla
         if (scenario.result?.status === Status.FAILED) {
-            // Limpiar nombre del archivo - quitar caracteres problemáticos
             const nombreArchivo = scenario.pickle.name
                 .replace(/[^a-zA-Z0-9\s]/g, '')
                 .replace(/\s+/g, '_')
@@ -93,20 +96,17 @@ export class AutomatizacionWeb {
             }
         }
 
-        // Capturar pasos
         scenario.pickle.steps.forEach((step: any) => {
             const stepStatus = scenario.result?.status === Status.PASSED ? 'passed' :
                 scenario.result?.status === Status.FAILED ? 'failed' : 'skipped';
             ReportingInterceptor.captureStep(step.text, stepStatus);
         });
 
-        // Finalizar escenario
         ReportingInterceptor.endScenario(
             scenario.result?.status === Status.PASSED ? 'passed' : 'failed',
             scenario.result?.message
         );
 
-        // Limpiar recursos
         await this.limpiar();
     }
 
@@ -153,7 +153,7 @@ export class AutomatizacionWeb {
     }
 
     async escribirEnCampo(selector: string, texto: string) {
-        await this.gestor.css(selector).fill(texto);
+        await this.obtenerLocator(selector).fill(texto);
     }
 
     async hacerClicPorTexto(texto: string) {
@@ -169,23 +169,23 @@ export class AutomatizacionWeb {
     }
 
     async hacerClicEnElemento(selector: string) {
-        await this.gestor.css(selector).click();
+        await this.obtenerLocator(selector).click();
     }
 
     async seleccionarOpcion(selector: string, valor: string) {
-        await this.gestor.css(selector).selectOption(valor);
+        await this.obtenerLocator(selector).selectOption(valor);
     }
 
     async subirArchivo(selector: string, rutaArchivo: string) {
-        await this.gestor.css(selector).setInputFiles(rutaArchivo);
+        await this.obtenerLocator(selector).setInputFiles(rutaArchivo);
     }
 
     async marcarCheckbox(selector: string) {
-        await this.gestor.css(selector).check();
+        await this.obtenerLocator(selector).check();
     }
 
     async desmarcarCheckbox(selector: string) {
-        await this.gestor.css(selector).uncheck();
+        await this.obtenerLocator(selector).uncheck();
     }
 
     // ===== VALIDACIONES =====
@@ -195,7 +195,7 @@ export class AutomatizacionWeb {
     }
 
     async esperarElementoVisible(selector: string, tiempoEspera = 10_000) {
-        await WaitStrategies.toBeVisible(this.gestor.css(selector), tiempoEspera);
+        await WaitStrategies.toBeVisible(this.obtenerLocator(selector), tiempoEspera);
     }
 
     async esperarElementoVisiblePorId(testId: string, tiempoEspera = 10_000) {
@@ -203,31 +203,31 @@ export class AutomatizacionWeb {
     }
 
     async esperarTextoEnElemento(selector: string, texto: string | RegExp, tiempoEspera = 10_000) {
-        await WaitStrategies.toHaveText(this.gestor.css(selector), texto, tiempoEspera);
+        await WaitStrategies.toHaveText(this.obtenerLocator(selector), texto, tiempoEspera);
     }
 
     async elementoExiste(selector: string): Promise<boolean> {
-        return await this.gestor.css(selector).count() > 0;
+        return await this.obtenerLocator(selector).count() > 0;
     }
 
     async elementoEsVisible(selector: string): Promise<boolean> {
-        return await this.gestor.css(selector).isVisible();
+        return await this.obtenerLocator(selector).isVisible();
     }
 
     async elementoEstaHabilitado(selector: string): Promise<boolean> {
-        return await this.gestor.css(selector).isEnabled();
+        return await this.obtenerLocator(selector).isEnabled();
     }
 
     async obtenerTexto(selector: string): Promise<string | null> {
-        return await this.gestor.css(selector).textContent();
+        return await this.obtenerLocator(selector).textContent();
     }
 
     async obtenerValor(selector: string): Promise<string> {
-        return await this.gestor.css(selector).inputValue();
+        return await this.obtenerLocator(selector).inputValue();
     }
 
     async obtenerAtributo(selector: string, atributo: string): Promise<string | null> {
-        return await this.gestor.css(selector).getAttribute(atributo);
+        return await this.obtenerLocator(selector).getAttribute(atributo);
     }
 
     async obtenerTituloPagina(): Promise<string> {
@@ -245,10 +245,18 @@ export class AutomatizacionWeb {
     }
 
     async esperarSelector(selector: string, opciones?: { state?: 'attached' | 'detached' | 'visible' | 'hidden', timeout?: number }) {
-        if (opciones) {
-            await this.pagina.waitForSelector(selector, opciones);
-        } else {
-            await this.pagina.waitForSelector(selector);
+        // Usar obtenerLocator para soportar XPath
+        const locator = this.obtenerLocator(selector);
+        const config = opciones || {};
+        
+        if (config.state === 'attached' || config.state === undefined) {
+            await locator.waitFor({ state: 'attached', timeout: config.timeout });
+        } else if (config.state === 'detached') {
+            await locator.waitFor({ state: 'detached', timeout: config.timeout });
+        } else if (config.state === 'visible') {
+            await locator.waitFor({ state: 'visible', timeout: config.timeout });
+        } else if (config.state === 'hidden') {
+            await locator.waitFor({ state: 'hidden', timeout: config.timeout });
         }
     }
 
@@ -315,18 +323,14 @@ export class AutomatizacionWeb {
     }
 
     async generarReporteWord(datos: WordReportData, rutaSalida: string, rutaPlantilla?: string) {
-        // Por ahora, guardar los datos como JSON si generateWordReport no funciona como esperado
-        // TODO: Implementar correctamente cuando se defina WordReportHelper
         const fs = await import('fs');
         const path = await import('path');
 
-        // Asegurar que el directorio existe
         const dir = path.dirname(rutaSalida);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
 
-        // Por ahora guardar como JSON
         const archivoJson = rutaSalida.replace('.docx', '.json');
         fs.writeFileSync(archivoJson, JSON.stringify(datos, null, 2));
 
