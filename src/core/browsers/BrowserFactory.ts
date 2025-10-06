@@ -2,23 +2,32 @@ import { chromium, firefox, webkit, Browser, BrowserContext, Page, BrowserType }
 import { ConfigManager } from "../config/ConfigManager";
 import { BrowserOptions } from "./BrowserOptions";
 import { LoggerFactory } from "../logging/LoggerFactory";
+import { BrowserName } from "../config/types";
 
 
 export class BrowserFactory {
+
+    private static getBrowserType(name: BrowserName): BrowserType<Browser> {
+        switch (name) {
+            case "firefox":
+                return firefox;
+            case "webkit":
+                return webkit;
+            default:
+                return chromium;
+        }
+    }
+
     static async launch(opts?: BrowserOptions): Promise<{ browser: Browser; context: BrowserContext; page: Page }> {
         const cfg = ConfigManager.get();
         const log = LoggerFactory.getLogger("BrowserFactory");
 
-
         const name = opts?.name ?? cfg.browser;
         const headless = opts?.headless ?? cfg.headless;
 
+        const type = this.getBrowserType(name);
 
-        const type: BrowserType<Browser> =
-            name === "firefox" ? firefox : name === "webkit" ? webkit : chromium;
-
-
-        log.info({ name, headless }, "Launching browser");
+        log.info({ name, headless }, "Iniciando el Navegador");
         const browser = await type.launch({ headless });
 
 
