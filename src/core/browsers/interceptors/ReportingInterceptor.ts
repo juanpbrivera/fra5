@@ -1,29 +1,83 @@
 import { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { LoggerFactory } from '../../logging/LoggerFactory';
+import type { Logger as PinoLogger } from 'pino';
+
+interface TestStep {
+  name: string;
+  status: 'passed' | 'failed' | 'skipped';
+  timestamp: string;
+}
+
+interface ConsoleLog {
+  type: string;
+  text: string;
+  timestamp: string;
+}
+
+interface PageError {
+  message: string;
+  stack?: string;
+  timestamp: string;
+}
+
+interface NetworkFailure {
+  url: string;
+  method: string;
+  failure?: string;
+  timestamp: string;
+}
+
+interface HttpError {
+  url: string;
+  status: number;
+  statusText: string;
+  timestamp: string;
+}
+
+interface TestData {
+  scenarioName: string;
+  featureName: string;
+  startTime: number;
+  endTime?: number;
+  browser: string;
+  status?: 'passed' | 'failed';
+  duration?: number;
+  screenshot?: string;
+  errorMessage?: string;
+  steps: TestStep[];
+  consoleLogs: ConsoleLog[];
+  pageErrors: PageError[];
+  networkFailures: NetworkFailure[];
+  httpErrors: HttpError[];
+}
 
 export class ReportingInterceptor {
-  private static capturedTests: any[] = [];
-  private static currentTest: any = {};
+  private static capturedTests: TestData[] = [];
+  private static currentTest: Partial<TestData> = {};
+  private static readonly logger: PinoLogger = LoggerFactory.getLogger('ReportingInterceptor');
+  private static readonly listenersAttached: WeakSet<Page> = new WeakSet();
 
-  static startScenario(scenarioName: string, featureName?: string): void {
+  static startScenario(scenarioName: string, featureName: string = 'Default Feature'): void {
     this.currentTest = {
       scenarioName,
-      featureName: featureName || 'Default Feature',
+      featureName,
       startTime: Date.now(),
       browser: process.env.BROWSER || 'chromium',
       steps: [],
       consoleLogs: [],
       pageErrors: [],
-      networkFailures: []
+      networkFailures: [],
+      httpErrors: []
     };
+
+    this.logger.info({ scenarioName, featureName }, 'Escenario iniciado');
   }
 
   static captureStep(stepName: string, status: 'passed' | 'failed' | 'skipped'): void {
-    if (!this.currentTest.steps) {
-      this.currentTest.steps = [];
-    }
-    
+    this.currentTest.steps ??= [];
+
     this.currentTest.steps.push({
       name: stepName,
       status,
@@ -32,72 +86,58 @@ export class ReportingInterceptor {
   }
 
   static async captureScreenshot(page: Page, name: string): Promise<string> {
-    // Asegurar que el directorio existe
     const artifactsDir = path.join(process.cwd(), 'artifacts');
+
     if (!fs.existsSync(artifactsDir)) {
       fs.mkdirSync(artifactsDir, { recursive: true });
     }
-    
-    // Obtener el viewport actual
-    const viewport = page.viewportSize();
-    const width = viewport?.width || 1366;
-    const height = viewport?.height || 768;
-    
-    // Configurar para máxima calidad
-    // await page.setViewportSize({ width: 1920, height: 1080 });
-    
+
     const filename = `${name}-${Date.now()}.png`;
     const screenshotPath = path.join('artifacts', filename);
     const fullPath = path.join(process.cwd(), screenshotPath);
-    
-    // Captura con máxima calidad PNG
-    await page.screenshot({ 
-      path: fullPath,
-      fullPage: false,
-      type: 'png',
-      animations: 'disabled',
-      scale: 'device',
-      caret: 'hide'
-    });
-    
-    // Restaurar viewport original
-    await page.setViewportSize({ width, height });
-    
-    this.currentTest.screenshot = screenshotPath;
-    return screenshotPath;
+
+    try {
+      await page.screenshot({
+        path: fullPath,
+        fullPage: false,
+        type: 'png',
+        animations: 'disabled',
+        scale: 'device',
+        caret: 'hide'
+      });
+
+      this.currentTest.screenshot = screenshotPath;
+      return screenshotPath;
+    } catch (error) {
+      this.logger.error({ error, name }, 'Error al capturar screenshot');
+      throw error;
+    }
   }
 
   static attachToPage(page: Page): void {
-    // Captura console logs
+    if (this.listenersAttached.has(page)) {
+      this.logger.warn('Listeners ya adjuntos a esta página');
+      return;
+    }
+
     page.on('console', msg => {
-      if (!this.currentTest.consoleLogs) {
-        this.currentTest.consoleLogs = [];
-      }
-      this.currentTest.consoleLogs.push({
+      this.currentTest.consoleLogs?.push({
         type: msg.type(),
         text: msg.text(),
         timestamp: new Date().toISOString()
       });
     });
 
-    // Captura errores de página
     page.on('pageerror', error => {
-      if (!this.currentTest.pageErrors) {
-        this.currentTest.pageErrors = [];
-      }
-      this.currentTest.pageErrors.push({
+      this.currentTest.pageErrors?.push({
         message: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()
       });
     });
 
-    // Captura fallos de red
     page.on('requestfailed', request => {
-      if (!this.currentTest.networkFailures) {
-        this.currentTest.networkFailures = [];
-      }
-      this.currentTest.networkFailures.push({
+      this.currentTest.networkFailures?.push({
         url: request.url(),
         method: request.method(),
         failure: request.failure()?.errorText,
@@ -105,12 +145,10 @@ export class ReportingInterceptor {
       });
     });
 
-    // Captura respuestas de red con errores
     page.on('response', response => {
       if (response.status() >= 400) {
-        if (!this.currentTest.httpErrors) {
-          this.currentTest.httpErrors = [];
-        }
+        this.currentTest.httpErrors ??= [];
+
         this.currentTest.httpErrors.push({
           url: response.url(),
           status: response.status(),
@@ -119,89 +157,40 @@ export class ReportingInterceptor {
         });
       }
     });
-  }
 
-  static updateCurrentUrl(url: string): void {
-    this.currentTest.url = url;
+    this.listenersAttached.add(page);
   }
 
   static endScenario(status: 'passed' | 'failed', errorMessage?: string): void {
     const endTime = Date.now();
-    
+    const duration = endTime - (this.currentTest.startTime || endTime);
+
     this.currentTest.status = status;
-    this.currentTest.duration = endTime - (this.currentTest.startTime || endTime);
+    this.currentTest.duration = duration;
     this.currentTest.errorMessage = errorMessage;
     this.currentTest.endTime = endTime;
-    
-    this.capturedTests.push({ ...this.currentTest });
-    
-    // Reset manteniendo contexto si es necesario
-    this.currentTest = {
-      featureName: this.currentTest.featureName
-    };
+
+    this.capturedTests.push({ ...this.currentTest } as TestData);
+
+    this.logger.info(
+      {
+        scenarioName: this.currentTest.scenarioName,
+        status,
+        duration,
+        steps: this.currentTest.steps?.length || 0
+      },
+      'Escenario finalizado'
+    );
+
+    this.currentTest = {};
   }
 
-  static getCapturedData(): any[] {
+  static getCapturedData(): TestData[] {
     return [...this.capturedTests];
   }
 
   static reset(): void {
     this.capturedTests = [];
     this.currentTest = {};
-  }
-
-  static captureError(error: any): void {
-    if (!this.currentTest.errors) {
-      this.currentTest.errors = [];
-    }
-    
-    const errorInfo = {
-      message: error?.message || String(error),
-      stack: error?.stack,
-      timestamp: new Date().toISOString()
-    };
-    
-    this.currentTest.errors.push(errorInfo);
-  }
-
-  static getCurrentTestStats(): any {
-    return {
-      scenarioName: this.currentTest.scenarioName,
-      duration: Date.now() - (this.currentTest.startTime || Date.now()),
-      stepsExecuted: this.currentTest.steps?.length || 0,
-      errors: this.currentTest.errors?.length || 0,
-      consoleLogs: this.currentTest.consoleLogs?.length || 0
-    };
-  }
-
-  static exportToJSON(filePath?: string): string {
-    const data = {
-      summary: {
-        total: this.capturedTests.length,
-        passed: this.capturedTests.filter(t => t.status === 'passed').length,
-        failed: this.capturedTests.filter(t => t.status === 'failed').length,
-        executedAt: new Date().toISOString()
-      },
-      tests: this.capturedTests
-    };
-    
-    const jsonString = JSON.stringify(data, null, 2);
-    
-    if (filePath) {
-      fs.writeFileSync(filePath, jsonString, 'utf8');
-    }
-    
-    return jsonString;
-  }
-}
-
-export function attachReporting(page: Page, scenarioName: string): void {
-  ReportingInterceptor.startScenario(scenarioName);
-  ReportingInterceptor.attachToPage(page);
-}
-
-export async function captureOnFailure(page: Page, failed: boolean, name: string): Promise<void> {
-  if (failed) {
-    await ReportingInterceptor.captureScreenshot(page, name);
   }
 }

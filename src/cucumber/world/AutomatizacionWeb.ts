@@ -62,8 +62,23 @@ export class AutomatizacionWeb {
         await this.iniciar();
     }
 
+    async capturarStep(pickleStep: any, result: any, Status: any): Promise<void> {
+        let stepStatus: 'passed' | 'failed' | 'skipped';
+
+        if (result.status === Status.PASSED) {
+            stepStatus = 'passed';
+        } else if (result.status === Status.FAILED) {
+            stepStatus = 'failed';
+        } else if (result.status === Status.SKIPPED) {
+            stepStatus = 'skipped';
+        } else {
+            stepStatus = 'skipped';
+        }
+
+        ReportingInterceptor.captureStep(pickleStep.text, stepStatus);
+    }
+
     async finalizarEscenario(scenario: any, Status: any): Promise<void> {
-        // Screenshot si falló
         if (scenario.result?.status === Status.FAILED) {
             const nombreArchivo = scenario.pickle.name
                 .replace(/[^a-zA-Z0-9\s]/g, '')
@@ -77,24 +92,10 @@ export class AutomatizacionWeb {
             }
         }
 
-        // Capturar steps - Sin ternario anidado
-        scenario.pickle.steps.forEach((step: any) => {
-            let stepStatus: 'passed' | 'failed' | 'skipped';
-            
-            if (scenario.result?.status === Status.PASSED) {
-                stepStatus = 'passed';
-            } else if (scenario.result?.status === Status.FAILED) {
-                stepStatus = 'failed';
-            } else {
-                stepStatus = 'skipped';
-            }
-            
-            ReportingInterceptor.captureStep(step.text, stepStatus);
-        });
+        const hasFailed = scenario.result?.status === Status.FAILED;
 
-        // Finalizar reporte
         ReportingInterceptor.endScenario(
-            scenario.result?.status === Status.PASSED ? 'passed' : 'failed',
+            hasFailed ? 'failed' : 'passed',
             scenario.result?.message
         );
 

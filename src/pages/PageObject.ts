@@ -1,24 +1,23 @@
-// Framework5/src/pages/PageObject.ts
 import type { AutomatizacionWeb } from '../cucumber/world/AutomatizacionWeb';
 import { Page, Locator } from '@playwright/test';
 import { ElementManager } from '../elements/ElementManager';
 import { WaitStrategies } from '../elements/WaitStrategies';
-import { InputActions } from '../interactions/InputActions';  // ← CAMBIO AQUÍ
+import { InputActions } from '../interactions/InputActions';
 import { NavigationActions } from '../interactions/NavigationActions';
 import { ValidationStrategies } from '../validations/ValidationStrategies';
 import { UtilityHelper } from '../utilities/UtilityHelper';
+import { LoggerFactory } from '../core/logging/LoggerFactory';
 
 export abstract class PageObject {
     protected page: Page;
     private readonly elementMgr: ElementManager;
+    private readonly logger = LoggerFactory.getLogger(this.constructor.name);
     
     constructor(protected readonly world: AutomatizacionWeb) {
         this.page = world.obtenerPagina();
         this.elementMgr = new ElementManager(this.page);
     }
 
-    // ===== SELECTORES SIMPLIFICADOS =====
-    
     protected $(selector: string): Locator {
         return this.elementMgr.locator(selector);
     }
@@ -27,8 +26,6 @@ export abstract class PageObject {
         return this.elementMgr.locatorAll(selector);
     }
 
-    // ===== LOCATORS MODERNOS =====
-    
     protected byTestId(id: string): Locator {
         return this.elementMgr.byTestId(id);
     }
@@ -60,14 +57,26 @@ export abstract class PageObject {
         return this.elementMgr.byTitle(text);
     }
 
-    // ===== ACCIONES BÁSICAS =====
-
     protected async escribir(selector: string, texto: string): Promise<void> {
-        await InputActions.fill(this.page, selector, texto);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.fill(this.page, selector, texto);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al escribir en "${selector}": ${error.message}`;
+            this.logger.error({ selector, texto, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
 
     protected async click(selector: string): Promise<void> {
-        await InputActions.click(this.page, selector);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.click(this.page, selector);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al hacer click en "${selector}": ${error.message}`;
+            this.logger.error({ selector, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
 
     protected async clickPorTexto(texto: string | RegExp): Promise<void> {
@@ -86,14 +95,26 @@ export abstract class PageObject {
     }
 
     protected async doubleClick(selector: string): Promise<void> {
-        await InputActions.doubleClick(this.page, selector);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.doubleClick(this.page, selector);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al hacer doble click en "${selector}": ${error.message}`;
+            this.logger.error({ selector, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
 
     protected async clickDerecho(selector: string): Promise<void> {
-        await InputActions.rightClick(this.page, selector);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.rightClick(this.page, selector);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al hacer click derecho en "${selector}": ${error.message}`;
+            this.logger.error({ selector, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
-
-    // ===== ESPERAS =====
 
     protected async esperar(selector: string, timeout = 10000): Promise<void> {
         await WaitStrategies.waitForVisible(this.$(selector), timeout);
@@ -111,8 +132,6 @@ export abstract class PageObject {
         await WaitStrategies.forUrlIncludes(this.page, fragmento, timeout);
     }
 
-    // ===== OBTENER VALORES =====
-
     protected async texto(selector: string): Promise<string | null> {
         return await this.$(selector).textContent();
     }
@@ -125,8 +144,6 @@ export abstract class PageObject {
         return await this.$(selector).getAttribute(attr);
     }
 
-    // ===== VALIDACIONES =====
-
     protected async existe(selector: string): Promise<boolean> {
         return await ValidationStrategies.validateElementExists(this.page, selector);
     }
@@ -138,8 +155,6 @@ export abstract class PageObject {
     protected async habilitado(selector: string): Promise<boolean> {
         return await ValidationStrategies.validateElementEnabled(this.page, selector);
     }
-
-    // ===== NAVEGACIÓN =====
 
     protected async navegar(ruta: string): Promise<void> {
         await this.world.abrirPaginaBase(ruta);
@@ -161,8 +176,6 @@ export abstract class PageObject {
         await NavigationActions.forward(this.page);
     }
 
-    // ===== UTILIDADES =====
-
     protected async capturar(nombre: string): Promise<void> {
         await this.world.capturarPantalla(nombre);
     }
@@ -180,28 +193,52 @@ export abstract class PageObject {
         await UtilityHelper.setOffline(this.page, offline);
     }
 
-    // ===== FORMULARIOS =====
-
     protected async seleccionar(selector: string, valor: string): Promise<void> {
-        await InputActions.selectOption(this.page, selector, valor);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.selectOption(this.page, selector, valor);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al seleccionar opción en "${selector}": ${error.message}`;
+            this.logger.error({ selector, valor, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
 
     protected async marcar(selector: string): Promise<void> {
-        await InputActions.check(this.page, selector);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.check(this.page, selector);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al marcar checkbox "${selector}": ${error.message}`;
+            this.logger.error({ selector, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
 
     protected async desmarcar(selector: string): Promise<void> {
-        await InputActions.uncheck(this.page, selector);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.uncheck(this.page, selector);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al desmarcar checkbox "${selector}": ${error.message}`;
+            this.logger.error({ selector, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
 
     protected async subirArchivo(selector: string, archivo: string): Promise<void> {
-        await InputActions.uploadFile(this.page, selector, archivo);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.uploadFile(this.page, selector, archivo);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al subir archivo en "${selector}": ${error.message}`;
+            this.logger.error({ selector, archivo, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
 
-    // ===== TECLADO Y MOUSE =====
-
     protected async presionarTecla(tecla: string): Promise<void> {
-        await InputActions.press(this.page, tecla);  // ← CAMBIO AQUÍ
+        await InputActions.press(this.page, tecla);
     }
 
     protected async escribirTeclas(texto: string, delay?: number): Promise<void> {
@@ -209,10 +246,15 @@ export abstract class PageObject {
     }
 
     protected async hover(selector: string): Promise<void> {
-        await InputActions.hover(this.page, selector);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.hover(this.page, selector);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al hacer hover en "${selector}": ${error.message}`;
+            this.logger.error({ selector, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
     }
-
-    // ===== MÉTODOS AVANZADOS =====
 
     protected async esperarRespuesta(url: string | RegExp, timeout = 30000) {
         return await WaitStrategies.forResponse(this.page, url, timeout);
@@ -226,21 +268,43 @@ export abstract class PageObject {
         return await UtilityHelper.evaluate(this.page, fn, ...args);
     }
 
-    // ===== MÉTODOS DE SCROLL =====
-
     protected async scrollAbajo(pixels?: number): Promise<void> {
         if (pixels) {
-            await InputActions.scrollBy(this.page, 0, pixels);  // ← CAMBIO AQUÍ
+            await InputActions.scrollBy(this.page, 0, pixels);
         } else {
-            await InputActions.scrollToBottom(this.page);  // ← CAMBIO AQUÍ
+            await InputActions.scrollToBottom(this.page);
         }
     }
 
     protected async scrollArriba(): Promise<void> {
-        await InputActions.scrollToTop(this.page);  // ← CAMBIO AQUÍ
+        await InputActions.scrollToTop(this.page);
     }
 
     protected async scrollHacia(selector: string): Promise<void> {
-        await InputActions.scrollIntoView(this.page, selector);  // ← CAMBIO AQUÍ
+        try {
+            await InputActions.scrollIntoView(this.page, selector);
+        } catch (error: any) {
+            const metodo = this.obtenerMetodoLlamador();
+            const mensaje = `Error en ${this.constructor.name}.${metodo}() al hacer scroll hacia "${selector}": ${error.message}`;
+            this.logger.error({ selector, metodo }, mensaje);
+            throw new Error(mensaje);
+        }
+    }
+
+    private obtenerMetodoLlamador(): string {
+        const stack = new Error().stack;
+        if (!stack) return 'unknown';
+        
+        const lines = stack.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes('at ' + this.constructor.name + '.') && 
+                !lines[i].includes('.escribir') && 
+                !lines[i].includes('.click') &&
+                !lines[i].includes('.obtenerMetodoLlamador')) {
+                const match = lines[i].match(/at \w+\.(\w+)/);
+                return match ? match[1] : 'unknown';
+            }
+        }
+        return 'unknown';
     }
 }

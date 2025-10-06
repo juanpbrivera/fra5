@@ -2,12 +2,16 @@ import * as fs from 'fs';
 import * as path from 'path';
 import createReport from 'docx-templates';
 
+function stripAnsiCodes(text: string): string {
+  if (!text) return text;
+  return text.replace(/\u001b\[[0-9;]*m/g, '');
+}
+
 export async function generateWordReport(
   webTests: any[],
   outputPath: string
 ): Promise<void> {
   const tests = webTests.map((test) => {
-    // Si hay screenshot, convertirlo a base64 
     let screenshotBase64 = null;
     if (test.screenshot) {
       let screenshotPath = test.screenshot;
@@ -24,14 +28,33 @@ export async function generateWordReport(
       }
     }
 
+    const cleanErrorMessage = test.errorMessage
+      ? stripAnsiCodes(test.errorMessage)
+      : null;
+
+    // Procesar steps con ícono correcto
+    const processedSteps = (test.steps || []).map((step: any) => {
+      let icon = '';
+      if (step.status === 'passed') icon = '✓';
+      else if (step.status === 'failed') icon = '✗';
+      else if (step.status === 'skipped') icon = '⊘';
+      
+      return {
+        name: step.name,
+        status: step.status,
+        displayText: `  ${icon} ${step.name}`
+      };
+    });
+
     return {
       testName: test.scenarioName || test.testName || 'Sin nombre',
       suiteName: test.featureName || 'Suite Principal',
       status: test.status === 'passed' ? 'passed' : 'failed',
       duration: test.duration || 0,
-      errorMessage: test.errorMessage || test.validationErrors || null,
+      errorMessage: cleanErrorMessage,
       screenshotPath: test.screenshot || null,
-      screenshotImage: screenshotBase64
+      screenshotImage: screenshotBase64,
+      steps: processedSteps
     };
   });
 
@@ -54,7 +77,6 @@ export async function generateWordReport(
     testSuites: groupBySuite(tests)
   };
 
-  // Buscar template
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'plantilla-reporte-web.docx');
   let actualTemplatePath = templatePath;
 
@@ -69,7 +91,6 @@ export async function generateWordReport(
 
   const template = fs.readFileSync(actualTemplatePath);
 
-  // Generar reporte - formato correcto para docx-templates
   const buffer = await createReport({
     template,
     data: reportData,
@@ -78,24 +99,21 @@ export async function generateWordReport(
       insertImage: (base64String: string) => {
         if (!base64String) return null;
 
-        // Formato correcto para docx-templates v4
         return {
-          width: 6,           // pulgadas
-          height: 4,          // pulgadas
-          data: base64String, // base64 string
+          width: 16.15,
+          height: 10,
+          data: base64String,
           extension: '.png'
         };
       }
     }
   });
 
-  // Asegurar directorio
   const dir = path.dirname(outputPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  // Escribir archivo
   fs.writeFileSync(outputPath, buffer);
 }
 
