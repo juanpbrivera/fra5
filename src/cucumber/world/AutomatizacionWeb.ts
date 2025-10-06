@@ -51,7 +51,7 @@ export class AutomatizacionWeb {
             return this.pagina.locator(selector);
         }
         // Si no, usar el gestor normal (CSS)
-        return this.gestor.css(selector);
+        return this.gestor.locator(selector);
     }
 
     // ===== CICLO DE VIDA =====
@@ -165,7 +165,7 @@ export class AutomatizacionWeb {
     }
 
     async hacerClicPorRol(rol: any, nombre?: string) {
-        await this.gestor.byRole(rol, nombre).click();
+        await this.gestor.byRole(rol, nombre ? { name: nombre } : undefined).click();
     }
 
     async hacerClicEnElemento(selector: string) {
