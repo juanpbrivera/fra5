@@ -10,7 +10,7 @@ import { UtilityHelper } from '../utilities/UtilityHelper';
 
 export abstract class PageObject {
     protected page: Page;
-    private elementMgr: ElementManager;
+    private readonly elementMgr: ElementManager;
     
     constructor(protected readonly world: AutomatizacionWeb) {
         this.page = world.obtenerPagina();
