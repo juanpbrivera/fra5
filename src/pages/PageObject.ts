@@ -5,7 +5,7 @@ import { Page, Locator } from '@playwright/test';
 export abstract class PageObject {
   protected page: Page;
   
-  constructor(protected world: AutomatizacionWeb) {
+  constructor(protected readonly world: AutomatizacionWeb) {
     this.page = world.obtenerPagina();
   }
 
