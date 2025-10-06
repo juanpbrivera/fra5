@@ -1,9 +1,8 @@
 // Framework5/src/cucumber/world/AutomatizacionWeb.ts
-import { IWorldOptions, setWorldConstructor } from '@cucumber/cucumber';
+import { IWorldOptions } from '@cucumber/cucumber';
 import { Browser, BrowserContext, Page } from '@playwright/test';
 import { ConfigManager } from '../../core/config/ConfigManager';
 import { BrowserFactory } from '../../core/browsers/BrowserFactory';
-import { ElementManager } from '../../elements/ElementManager';
 import { ScreenshotHelper } from '../../utilities/ScreenshotHelper';
 import { LoggerFactory } from '../../core/logging/LoggerFactory';
 import { ReportingInterceptor } from '../../core/browsers/interceptors/ReportingInterceptor';
@@ -21,7 +20,7 @@ export class AutomatizacionWeb {
     private navegador!: Browser;
     private contexto!: BrowserContext;
     private pagina!: Page;
-    private log = LoggerFactory.getLogger('AutomatizacionWeb');
+    private readonly log = LoggerFactory.getLogger('AutomatizacionWeb');  // ← readonly
     readonly parametros: ParametrosAutomatizacion;
 
     constructor(opciones: IWorldOptions) {
@@ -78,10 +77,18 @@ export class AutomatizacionWeb {
             }
         }
 
-        // Capturar steps
+        // Capturar steps - Sin ternario anidado
         scenario.pickle.steps.forEach((step: any) => {
-            const stepStatus = scenario.result?.status === Status.PASSED ? 'passed' :
-                scenario.result?.status === Status.FAILED ? 'failed' : 'skipped';
+            let stepStatus: 'passed' | 'failed' | 'skipped';
+            
+            if (scenario.result?.status === Status.PASSED) {
+                stepStatus = 'passed';
+            } else if (scenario.result?.status === Status.FAILED) {
+                stepStatus = 'failed';
+            } else {
+                stepStatus = 'skipped';
+            }
+            
             ReportingInterceptor.captureStep(step.text, stepStatus);
         });
 
