@@ -1,10 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import createReport from 'docx-templates';
+import { LoggerFactory } from '../core/logging/LoggerFactory';
+
+const log = LoggerFactory.getLogger('WordReportHelper');
+const ANSI_ESCAPE_PATTERN = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g');
 
 function stripAnsiCodes(text: string): string {
   if (!text) return text;
-  return text.replace(/\u001b\[[0-9;]*m/g, '');
+  return text.replace(ANSI_ESCAPE_PATTERN, '');
 }
 
 export async function generateWordReport(
@@ -22,9 +26,9 @@ export async function generateWordReport(
       if (fs.existsSync(screenshotPath)) {
         const imageBuffer = fs.readFileSync(screenshotPath);
         screenshotBase64 = imageBuffer.toString('base64');
-        console.log(`✅ Screenshot encontrado y convertido: ${test.screenshot}, base64 length: ${screenshotBase64.length}`);
+        log.debug({ screenshot: test.screenshot, base64Length: screenshotBase64.length }, 'Screenshot convertido a base64');
       } else {
-        console.log(`❌ Screenshot no encontrado: ${screenshotPath}`);
+        log.warn({ screenshotPath }, 'Screenshot no encontrado');
       }
     }
 
@@ -32,7 +36,6 @@ export async function generateWordReport(
       ? stripAnsiCodes(test.errorMessage)
       : null;
 
-    // Procesar steps con ícono correcto
     const processedSteps = (test.steps || []).map((step: any) => {
       let icon = '';
       if (step.status === 'passed') icon = '✓';

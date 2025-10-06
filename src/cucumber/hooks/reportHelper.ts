@@ -13,7 +13,6 @@ export async function generateTestReport(): Promise<void> {
     try {
       await generateWordReport(capturedData, outputPath);
       log.info({ path: outputPath }, 'Reporte Word generado');
-      console.log(`\n📄 Reporte Word generado: ${outputPath}`);
     } catch (error) {
       log.error({ error }, 'Error generando reporte');
     }

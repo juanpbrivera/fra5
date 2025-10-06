@@ -12,7 +12,7 @@ export abstract class PageObject {
     protected page: Page;
     private readonly elementMgr: ElementManager;
     private readonly logger = LoggerFactory.getLogger(this.constructor.name);
-    
+
     constructor(protected readonly world: AutomatizacionWeb) {
         this.page = world.obtenerPagina();
         this.elementMgr = new ElementManager(this.page);
@@ -185,7 +185,7 @@ export abstract class PageObject {
     }
 
     protected async debug(mensaje?: string): Promise<void> {
-        if (mensaje) console.log(`🔍 DEBUG [${this.constructor.name}]:`, mensaje);
+        if (mensaje) this.logger.debug({ mensaje }, `DEBUG [${this.constructor.name}]`);
         await UtilityHelper.pause(this.page);
     }
 
@@ -294,14 +294,16 @@ export abstract class PageObject {
     private obtenerMetodoLlamador(): string {
         const stack = new Error().stack;
         if (!stack) return 'unknown';
-        
+
         const lines = stack.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes('at ' + this.constructor.name + '.') && 
-                !lines[i].includes('.escribir') && 
-                !lines[i].includes('.click') &&
-                !lines[i].includes('.obtenerMetodoLlamador')) {
-                const match = lines[i].match(/at \w+\.(\w+)/);
+        const methodPattern = /at \w+\.(\w+)/;
+
+        for (const line of lines) {
+            if (line.includes('at ' + this.constructor.name + '.') &&
+                !line.includes('.escribir') &&
+                !line.includes('.click') &&
+                !line.includes('.obtenerMetodoLlamador')) {
+                const match = methodPattern.exec(line);
                 return match ? match[1] : 'unknown';
             }
         }
