@@ -8,7 +8,8 @@
         "dist/**/*",
         "templates/",
         "scripts/",
-        "cucumber/"
+        "cucumber/",
+        "src"
     ],
     "bin": {
         "web-test": "./scripts/test-runner.js"

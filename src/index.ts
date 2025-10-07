@@ -3,7 +3,7 @@
 // Integración con Cucumber - World en español
 export { AutomatizacionWeb } from './cucumber/world/AutomatizacionWeb';
 
-// Clase base para PageObjects =====
+// Clase base para PageObjects
 export { PageObject } from './pages/PageObject';
 
 // Helper para reportes

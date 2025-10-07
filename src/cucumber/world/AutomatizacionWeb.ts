@@ -13,7 +13,7 @@ export interface ParametrosAutomatizacion {
 }
 
 /**
- * World de Cucumber para automatización web
+ * World de Cucumber para Automatizacion web
  * Maneja el ciclo de vida del navegador y provee acceso a objetos Playwright
  */
 export class AutomatizacionWeb {
@@ -39,7 +39,7 @@ export class AutomatizacionWeb {
         this.contexto = context;
         this.pagina = page;
         ReportingInterceptor.attachToPage(this.pagina);
-        this.log.info('Automatización Web iniciada');
+        this.log.info('Automatizacion Web iniciada');
     }
 
     async limpiar(): Promise<void> {
@@ -49,7 +49,7 @@ export class AutomatizacionWeb {
         if (this.navegador) {
             await this.navegador.close();
         }
-        this.log.info('Automatización Web finalizada');
+        this.log.info('Automatizacion Web finalizada');
     }
 
     // ===== MÉTODOS PARA HOOKS =====
@@ -136,4 +136,5 @@ export class AutomatizacionWeb {
     async capturarPantalla(nombre: string): Promise<void> {
         await ScreenshotHelper.capture(this.pagina, nombre);
     }
+
 }

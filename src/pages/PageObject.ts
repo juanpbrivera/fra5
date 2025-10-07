@@ -7,6 +7,7 @@ import { NavigationActions } from '../interactions/NavigationActions';
 import { ValidationStrategies } from '../validations/ValidationStrategies';
 import { UtilityHelper } from '../utilities/UtilityHelper';
 import { LoggerFactory } from '../core/logging/LoggerFactory';
+import { esperar, AssercionesLocator, AssercionesPagina } from '../validations/Assertions';
 
 export abstract class PageObject {
     protected page: Page;
@@ -308,5 +309,91 @@ export abstract class PageObject {
             }
         }
         return 'unknown';
+    }
+
+    // ===== LOCATORS EN ESPAÑOL (retornan Locator puro) =====
+
+    /**
+     * Obtiene elemento por rol ARIA.
+     * @param rol - Rol del elemento ('button' | 'link' | 'textbox' | etc.)
+     * @param opciones - Opciones adicionales como { name: 'texto' }
+     */
+    protected porRol(
+        rol: Parameters<Page['getByRole']>[0],
+        opciones?: Parameters<Page['getByRole']>[1]
+    ): Locator {
+        return this.elementMgr.byRole(rol, opciones);
+    }
+
+    /**
+     * Obtiene elemento por texto visible.
+     * @param texto - Texto a buscar (string o RegExp)
+     */
+    protected porTexto(texto: string | RegExp): Locator {
+        return this.elementMgr.byText(texto);
+    }
+
+    /**
+     * Obtiene elemento por etiqueta (label).
+     * @param etiqueta - Texto de la etiqueta asociada
+     */
+    protected porEtiqueta(etiqueta: string | RegExp): Locator {
+        return this.elementMgr.byLabel(etiqueta);
+    }
+
+    /**
+     * Obtiene elemento por placeholder.
+     * @param placeholder - Texto del placeholder
+     */
+    protected porPlaceholder(placeholder: string | RegExp): Locator {
+        return this.elementMgr.byPlaceholder(placeholder);
+    }
+
+    /**
+     * Obtiene elemento por atributo alt (imágenes).
+     * @param textoAlt - Texto alternativo de la imagen
+     */
+    protected porTextoAlt(textoAlt: string | RegExp): Locator {
+        return this.elementMgr.byAltText(textoAlt);
+    }
+
+    /**
+     * Obtiene elemento por atributo title.
+     * @param titulo - Texto del atributo title
+     */
+    protected porTitulo(titulo: string | RegExp): Locator {
+        return this.elementMgr.byTitle(titulo);
+    }
+
+    /**
+     * Obtiene elemento por data-testid.
+     * @param id - Valor del atributo data-testid
+     */
+    protected porTestId(id: string): Locator {
+        return this.elementMgr.byTestId(id);
+    }
+
+    // ===== ASSERTIONS EN ESPAÑOL =====
+
+    /**
+     * Crea assertions en español para validaciones de elementos o página.
+     * 
+     * @param objetivo - Locator o Page a verificar
+     * @returns Objeto con métodos de assertion
+     * 
+     * @example
+     * ```typescript
+     * // Assert sobre un elemento
+     * await this.verificar(this.porTexto('Login')).estaVisible();
+     * await this.verificar(this.porRol('button')).estaHabilitado();
+     * 
+     * // Assert sobre la página
+     * await this.verificar(this.page).tieneURL(/dashboard/);
+     * ```
+     */
+    protected verificar(objetivo: Locator): AssercionesLocator;
+    protected verificar(objetivo: Page): AssercionesPagina;
+    protected verificar(objetivo: any): any {
+        return esperar(objetivo);
     }
 }
