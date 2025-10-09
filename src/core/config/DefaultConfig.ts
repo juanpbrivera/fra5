@@ -151,6 +151,8 @@ export const DefaultConfig: WebConfig = {
      */
     screenshotOnFailure: true,
 
+    timeout: 30000,
+
     /**
      * Opciones del contexto de navegación de Playwright.
      * 

@@ -94,6 +94,10 @@ export class BrowserFactory {
             storageState: cfg.contextOptions?.storageStatePath
         });
 
+        if (cfg.timeout) {
+            context.setDefaultTimeout(cfg.timeout);
+        }
+        
         const page = await context.newPage();
 
         if (this.isTracingEnabled(cfg.trace)) {

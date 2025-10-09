@@ -9,6 +9,7 @@ export interface WebConfig {
     trace: "on" | "off" | "retain-on-failure";
     video: boolean;
     screenshotOnFailure: boolean;
+    timeout?: number;
     contextOptions?: {
         viewport?: { width: number; height: number };
         locale?: string;
