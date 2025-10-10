@@ -20,7 +20,7 @@ export class AutomatizacionWeb {
     private navegador!: Browser;
     private contexto!: BrowserContext;
     private pagina!: Page;
-    private readonly log = LoggerFactory.getLogger('AutomatizacionWeb');  // ← readonly
+    private readonly log = LoggerFactory.getLogger('AutomatizacionWeb');
     readonly parametros: ParametrosAutomatizacion;
 
     constructor(opciones: IWorldOptions) {
@@ -62,7 +62,16 @@ export class AutomatizacionWeb {
         await this.iniciar();
     }
 
+    /**
+     * Captura step con screenshot condicional según configuración.
+     * 
+     * @param pickleStep - Step de Cucumber
+     * @param result - Resultado del step
+     * @param Status - Enum de estados de Cucumber
+     */
     async capturarStep(pickleStep: any, result: any, Status: any): Promise<void> {
+        const config = ConfigManager.get();
+        
         let stepStatus: 'passed' | 'failed' | 'skipped';
 
         if (result.status === Status.PASSED) {
@@ -75,20 +84,52 @@ export class AutomatizacionWeb {
             stepStatus = 'skipped';
         }
 
-        ReportingInterceptor.captureStep(pickleStep.text, stepStatus);
+        let screenshotPath: string | undefined;
+
+        // Determinar si capturar screenshot
+        const debeCapturar = 
+            config.screenshotMode === 'always' || 
+            (config.screenshotMode === 'on-failure' && stepStatus === 'failed');
+
+        if (debeCapturar) {
+            try {
+                const nombreArchivo = `step_${pickleStep.text
+                    .replace(/[^a-zA-Z0-9\s]/g, '')
+                    .replace(/\s+/g, '_')
+                    .substring(0, 40)}`;
+
+                screenshotPath = await ReportingInterceptor.captureScreenshot(
+                    this.pagina,
+                    nombreArchivo
+                );
+            } catch (error) {
+                this.log.error({ error, step: pickleStep.text }, 'Error capturando screenshot del step');
+            }
+        }
+
+        ReportingInterceptor.captureStep(pickleStep.text, stepStatus, screenshotPath);
     }
 
     async finalizarEscenario(scenario: any, Status: any): Promise<void> {
-        if (scenario.result?.status === Status.FAILED) {
-            const nombreArchivo = scenario.pickle.name
+        // Solo capturar screenshot final si falla Y no está en modo 'always'
+        const config = ConfigManager.get();
+        
+        if (scenario.result?.status === Status.FAILED && config.screenshotMode !== 'always') {
+            const nombreArchivo = `final_${scenario.pickle.name
                 .replace(/[^a-zA-Z0-9\s]/g, '')
                 .replace(/\s+/g, '_')
-                .substring(0, 50);
+                .substring(0, 50)}`;
 
             try {
-                await ReportingInterceptor.captureScreenshot(this.pagina, nombreArchivo);
+                const screenshotPath = await ReportingInterceptor.captureScreenshot(
+                    this.pagina,
+                    nombreArchivo
+                );
+                
+                // Guardar como screenshot final del escenario
+                (ReportingInterceptor as any).currentTest.screenshot = screenshotPath;
             } catch (error) {
-                this.log.error({ error }, 'Error capturando screenshot');
+                this.log.error({ error }, 'Error capturando screenshot final');
             }
         }
 
@@ -136,5 +177,4 @@ export class AutomatizacionWeb {
     async capturarPantalla(nombre: string): Promise<void> {
         await ScreenshotHelper.capture(this.pagina, nombre);
     }
-
 }

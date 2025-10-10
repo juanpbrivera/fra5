@@ -8,6 +8,7 @@ interface TestStep {
   name: string;
   status: 'passed' | 'failed' | 'skipped';
   timestamp: string;
+  screenshot?: string; // ← NUEVO: Screenshot por step
 }
 
 interface ConsoleLog {
@@ -75,16 +76,35 @@ export class ReportingInterceptor {
     this.logger.info({ scenarioName, featureName }, 'Escenario iniciado');
   }
 
-  static captureStep(stepName: string, status: 'passed' | 'failed' | 'skipped'): void {
+  /**
+   * Captura un step con screenshot opcional.
+   * 
+   * @param stepName - Nombre del step
+   * @param status - Estado del step
+   * @param screenshotPath - Ruta del screenshot (opcional)
+   */
+  static captureStep(stepName: string, status: 'passed' | 'failed' | 'skipped', screenshotPath?: string): void {
     this.currentTest.steps ??= [];
 
     this.currentTest.steps.push({
       name: stepName,
       status,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      screenshot: screenshotPath
     });
+
+    if (screenshotPath) {
+      this.logger.debug({ stepName, screenshot: screenshotPath }, 'Step capturado con screenshot');
+    }
   }
 
+  /**
+   * Captura screenshot optimizado.
+   * 
+   * @param page - Página de Playwright
+   * @param name - Nombre del archivo
+   * @returns Ruta relativa del screenshot
+   */
   static async captureScreenshot(page: Page, name: string): Promise<string> {
     const artifactsDir = path.join(process.cwd(), 'artifacts');
 
@@ -92,7 +112,13 @@ export class ReportingInterceptor {
       fs.mkdirSync(artifactsDir, { recursive: true });
     }
 
-    const filename = `${name}-${Date.now()}.png`;
+    // Sanitizar nombre de archivo
+    const sanitizedName = name
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 50);
+
+    const filename = `${sanitizedName}-${Date.now()}.png`;
     const screenshotPath = path.join('artifacts', filename);
     const fullPath = path.join(process.cwd(), screenshotPath);
 
@@ -106,7 +132,6 @@ export class ReportingInterceptor {
         caret: 'hide'
       });
 
-      this.currentTest.screenshot = screenshotPath;
       return screenshotPath;
     } catch (error) {
       this.logger.error({ error, name }, 'Error al capturar screenshot');
