@@ -6,6 +6,7 @@ import { BrowserFactory } from '../../core/browsers/BrowserFactory';
 import { ScreenshotHelper } from '../../utilities/ScreenshotHelper';
 import { LoggerFactory } from '../../core/logging/LoggerFactory';
 import { ReportingInterceptor } from '../../core/browsers/interceptors/ReportingInterceptor';
+import type { Logger as PinoLogger } from 'pino';
 
 export interface ParametrosAutomatizacion {
     ambiente?: string;
@@ -13,14 +14,26 @@ export interface ParametrosAutomatizacion {
 }
 
 /**
- * World de Cucumber para Automatizacion web
- * Maneja el ciclo de vida del navegador y provee acceso a objetos Playwright
+ * World de Cucumber para Automatizacion web.
+ * 
+ * ACCESO A CONFIGURACIÓN Y LOGGING:
+ * Todos los métodos de ConfigManager y LoggerFactory están
+ * encapsulados aquí para mantener el API limpio.
+ * 
+ * @example
+ * ```typescript
+ * // En hooks.ts
+ * import { AutomatizacionWeb } from '@automation/web-automation-framework';
+ * 
+ * const logger = AutomatizacionWeb.crearLogger('CucumberHooks');
+ * const timeout = AutomatizacionWeb.obtenerTimeoutCucumber();
+ * ```
  */
 export class AutomatizacionWeb {
     private navegador!: Browser;
     private contexto!: BrowserContext;
     private pagina!: Page;
-    private readonly log = LoggerFactory.getLogger('AutomatizacionWeb');
+    private readonly log: PinoLogger;
     readonly parametros: ParametrosAutomatizacion;
 
     constructor(opciones: IWorldOptions) {
@@ -29,6 +42,103 @@ export class AutomatizacionWeb {
         if (this.parametros.urlBase) {
             ConfigManager.override({ baseUrl: this.parametros.urlBase });
         }
+        this.log = LoggerFactory.getLogger('AutomatizacionWeb');
+    }
+
+    // ===== MÉTODOS ESTÁTICOS PARA CONFIGURACIÓN =====
+
+    /**
+     * Carga la configuración del ambiente especificado.
+     * Debe llamarse ANTES de cualquier otro método.
+     * 
+     * @param ambiente - Nombre del ambiente ('cert' | 'desa' | 'prod')
+     * 
+     * @example
+     * ```typescript
+     * // En hooks.ts (al inicio)
+     * AutomatizacionWeb.cargarConfiguracion();
+     * ```
+     */
+    static cargarConfiguracion(ambiente?: string): void {
+        ConfigManager.load(ambiente);
+    }
+
+    /**
+     * Obtiene el timeout de Cucumber (el más grande de la jerarquía).
+     * 
+     * @returns Timeout en milisegundos
+     * 
+     * @example
+     * ```typescript
+     * const timeout = AutomatizacionWeb.obtenerTimeoutCucumber();
+     * setDefaultTimeout(timeout);
+     * ```
+     */
+    static obtenerTimeoutCucumber(): number {
+        return ConfigManager.getCucumberTimeout();
+    }
+
+    /**
+     * Obtiene el timeout de Playwright.
+     * 
+     * @returns Timeout en milisegundos
+     */
+    static obtenerTimeoutPlaywright(): number {
+        return ConfigManager.getPlaywrightTimeout();
+    }
+
+    /**
+     * Obtiene el timeout de Assertions.
+     * 
+     * @returns Timeout en milisegundos
+     */
+    static obtenerTimeoutAssertion(): number {
+        return ConfigManager.getAssertionTimeout();
+    }
+
+    /**
+     * Obtiene el timeout de Steps.
+     * 
+     * @returns Timeout en milisegundos
+     */
+    static obtenerTimeoutStep(): number {
+        return ConfigManager.getStepTimeout();
+    }
+
+    /**
+     * Obtiene todos los timeouts calculados.
+     * 
+     * @returns Objeto con todos los timeouts
+     * 
+     * @example
+     * ```typescript
+     * const timeouts = AutomatizacionWeb.obtenerTodosLosTimeouts();
+     * // { cucumber: 60000, playwright: 50000, assertion: 45000, step: 30000 }
+     * ```
+     */
+    static obtenerTodosLosTimeouts(): {
+        cucumber: number;
+        playwright: number;
+        assertion: number;
+        step: number;
+    } {
+        return ConfigManager.getAllTimeouts();
+    }
+
+    /**
+     * Crea un logger con el nombre del componente especificado.
+     * 
+     * @param componente - Nombre del componente (ej: 'CucumberHooks', 'LoginPage')
+     * @returns Logger de Pino
+     * 
+     * @example
+     * ```typescript
+     * const logger = AutomatizacionWeb.crearLogger('CucumberHooks');
+     * logger.info('Mensaje de log');
+     * ```
+     */
+    static crearLogger(componente: string): PinoLogger {
+        return LoggerFactory.getLogger(componente);
     }
 
     // ===== CICLO DE VIDA =====
@@ -62,13 +172,6 @@ export class AutomatizacionWeb {
         await this.iniciar();
     }
 
-    /**
-     * Captura step con screenshot condicional según configuración.
-     * 
-     * @param pickleStep - Step de Cucumber
-     * @param result - Resultado del step
-     * @param Status - Enum de estados de Cucumber
-     */
     async capturarStep(pickleStep: any, result: any, Status: any): Promise<void> {
         const config = ConfigManager.get();
         
@@ -86,7 +189,6 @@ export class AutomatizacionWeb {
 
         let screenshotPath: string | undefined;
 
-        // Determinar si capturar screenshot
         const debeCapturar = 
             config.screenshotMode === 'always' || 
             (config.screenshotMode === 'on-failure' && stepStatus === 'failed');
@@ -111,7 +213,6 @@ export class AutomatizacionWeb {
     }
 
     async finalizarEscenario(scenario: any, Status: any): Promise<void> {
-        // Solo capturar screenshot final si falla Y no está en modo 'always'
         const config = ConfigManager.get();
         
         if (scenario.result?.status === Status.FAILED && config.screenshotMode !== 'always') {
@@ -126,7 +227,6 @@ export class AutomatizacionWeb {
                     nombreArchivo
                 );
                 
-                // Guardar como screenshot final del escenario
                 (ReportingInterceptor as any).currentTest.screenshot = screenshotPath;
             } catch (error) {
                 this.log.error({ error }, 'Error capturando screenshot final');
