@@ -189,6 +189,7 @@ export class AutomatizacionWeb {
 
         let screenshotPath: string | undefined;
 
+        // ✅ CORRECTO: Solo captura en "always" o cuando falla en "on-failure"
         const debeCapturar = 
             config.screenshotMode === 'always' || 
             (config.screenshotMode === 'on-failure' && stepStatus === 'failed');
@@ -215,7 +216,12 @@ export class AutomatizacionWeb {
     async finalizarEscenario(scenario: any, Status: any): Promise<void> {
         const config = ConfigManager.get();
         
-        if (scenario.result?.status === Status.FAILED && config.screenshotMode !== 'always') {
+        // ✅ FIX: Lógica corregida para respetar screenshotMode
+        const debeCapturarFinal = 
+            config.screenshotMode === 'always' || 
+            (config.screenshotMode === 'on-failure' && scenario.result?.status === Status.FAILED);
+
+        if (debeCapturarFinal) {
             const nombreArchivo = `final_${scenario.pickle.name
                 .replace(/[^a-zA-Z0-9\s]/g, '')
                 .replace(/\s+/g, '_')
