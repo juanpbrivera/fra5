@@ -37,7 +37,6 @@ export interface WebConfig {
     headless: boolean;
     trace: "on" | "off" | "retain-on-failure";
     video: boolean;
-    screenshotOnFailure: boolean;
     screenshotMode: ScreenshotMode;
     
     /**
