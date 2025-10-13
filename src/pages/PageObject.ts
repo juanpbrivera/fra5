@@ -7,6 +7,7 @@ import { NavigationActions } from '../interactions/NavigationActions';
 import { ValidationStrategies } from '../validations/ValidationStrategies';
 import { UtilityHelper } from '../utilities/UtilityHelper';
 import { LoggerFactory } from '../core/logging/LoggerFactory';
+import { DataManager } from '../utilities/DataManager';
 import { esperar, AssercionesLocator, AssercionesPagina } from '../validations/Assertions';
 
 export abstract class PageObject {
@@ -395,5 +396,57 @@ export abstract class PageObject {
     protected verificar(objetivo: Page): AssercionesPagina;
     protected verificar(objetivo: any): any {
         return esperar(objetivo);
+    }
+
+    /**
+     * Obtiene data de prueba del JSON configurado.
+     */
+    protected obtenerDataJSON<T = any>(key: string): T | undefined {
+        const config = this.world.obtenerConfiguracion();
+        
+        if (key.includes('.')) {
+            return this.getNestedValue(config.dataPrueba, key) as T;
+        }
+        
+        return config.dataPrueba?.[key] as T;
+    }
+
+    /**
+     * ✅ Obtiene una fila de un CSV.
+     * 
+     * @param csvName - Nombre del CSV (sin extensión)
+     * @param filters - Filtros para buscar la fila
+     * @returns Objeto con la fila encontrada
+     */
+    protected async obtenerDataCSV<T = any>(
+        csvName: string, 
+        filters?: Record<string, any>
+    ): Promise<T> {
+        return await DataManager.obtenerFila<T>(csvName, filters);
+    }
+
+    /**
+     * ✅ Obtiene todas las filas de un CSV.
+     */
+    protected async obtenerTodasLasFilasCSV<T = any>(
+        csvName: string,
+        filters?: Record<string, any>
+    ): Promise<T[]> {
+        return await DataManager.obtenerTodasLasFilas<T>(csvName, filters);
+    }
+
+    /**
+     * ✅ Obtiene un valor específico de una fila CSV.
+     */
+    protected async obtenerValorCSV<T = any>(
+        csvName: string,
+        filters: Record<string, any>,
+        column: string
+    ): Promise<T> {
+        return await DataManager.obtenerValor<T>(csvName, filters, column);
+    }
+
+    private getNestedValue(obj: any, path: string): any {
+        return path.split('.').reduce((current, key) => current?.[key], obj);
     }
 }
