@@ -1,35 +1,42 @@
 export type BrowserName = "chromium" | "firefox" | "webkit";
 export type ScreenshotMode = "on-failure" | "always" | "off";
 
-/**
- * Multiplicadores para calcular timeouts jerárquicos.
- * 
- * El timeout base (cucumber) es el más grande (100%).
- * Los demás se calculan como porcentaje del base.
- */
 export interface TimeoutMultipliers {
-    /**
-     * Multiplicador para Playwright (navegación, esperas de elementos).
-     * @default 0.83 (83% del timeout de Cucumber)
-     * @example Si cucumber = 60000ms, playwright = 50000ms
-     */
     playwright: number;
-    
-    /**
-     * Multiplicador para Assertions (expect, verificaciones).
-     * @default 0.75 (75% del timeout de Cucumber)
-     * @example Si cucumber = 60000ms, assertion = 45000ms
-     */
     assertion: number;
-    
-    /**
-     * Multiplicador para Steps individuales (acciones cortas).
-     * @default 0.5 (50% del timeout de Cucumber)
-     * @example Si cucumber = 60000ms, step = 30000ms
-     */
     step: number;
 }
 
+/**
+ * Estructura de credenciales por rol.
+ */
+export interface Credencial {
+    usuario: string;
+    password: string;
+}
+
+/**
+ * Configuración web del framework.
+ * 
+ * Soporta propiedades dinámicas para data de prueba:
+ * - Credenciales
+ * - Data de prueba (cuentas, montos, etc.)
+ * - Cualquier configuración custom
+ * 
+ * @example
+ * ```json
+ * {
+ *   "env": "cert",
+ *   "baseUrl": "https://...",
+ *   "credenciales": {
+ *     "vendedor": { "usuario": "...", "password": "..." }
+ *   },
+ *   "dataPrueba": {
+ *     "cuentaValida": "0011-2233-4455"
+ *   }
+ * }
+ * ```
+ */
 export interface WebConfig {
     env: string;
     baseUrl: string;
@@ -38,36 +45,7 @@ export interface WebConfig {
     trace: "on" | "off" | "retain-on-failure";
     video: boolean;
     screenshotMode: ScreenshotMode;
-    
-    /**
-     * Timeout base en milisegundos.
-     * 
-     * Este es el timeout de Cucumber (el más grande).
-     * Los demás timeouts se calculan automáticamente usando multiplicadores.
-     * 
-     * @default 60000 (60 segundos)
-     * @env TIMEOUT
-     * 
-     * @example
-     * ```json
-     * {
-     *   "timeout": 60000  // ← Define uno solo
-     * }
-     * 
-     * // Se calcula automáticamente:
-     * // Cucumber:   60000ms (100%)
-     * // Playwright: 50000ms (83%)
-     * // Assertion:  45000ms (75%)
-     * ```
-     */
     timeout: number;
-    
-    /**
-     * Multiplicadores para calcular timeouts jerárquicos.
-     * Opcional - si no se proporciona, usa valores por defecto.
-     * 
-     * @default { playwright: 0.83, assertion: 0.75, step: 0.5 }
-     */
     timeoutMultipliers?: TimeoutMultipliers;
     
     contextOptions?: {
@@ -76,5 +54,38 @@ export interface WebConfig {
         geolocation?: { latitude: number; longitude: number };
         permissions?: string[];
         storageStatePath?: string;
+        timezoneId?: string;
     };
+    
+    /**
+     * ✅ Credenciales por rol (opcional).
+     * 
+     * @example
+     * ```json
+     * "credenciales": {
+     *   "vendedor": { "usuario": "...", "password": "..." },
+     *   "administrador": { "usuario": "...", "password": "..." }
+     * }
+     * ```
+     */
+    credenciales?: Record<string, Credencial>;
+    
+    /**
+     * ✅ Data de prueba (opcional).
+     * 
+     * @example
+     * ```json
+     * "dataPrueba": {
+     *   "cuentaValida": "0011-2233-4455",
+     *   "montoTransferencia": "100.00"
+     * }
+     * ```
+     */
+    dataPrueba?: Record<string, any>;
+    
+    /**
+     * ✅ Permite propiedades dinámicas adicionales.
+     * Útil para configuraciones custom sin modificar la interfaz.
+     */
+    [key: string]: any;
 }
