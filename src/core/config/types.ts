@@ -7,36 +7,6 @@ export interface TimeoutMultipliers {
     step: number;
 }
 
-/**
- * Estructura de credenciales por rol.
- */
-export interface Credencial {
-    usuario: string;
-    password: string;
-}
-
-/**
- * Configuración web del framework.
- * 
- * Soporta propiedades dinámicas para data de prueba:
- * - Credenciales
- * - Data de prueba (cuentas, montos, etc.)
- * - Cualquier configuración custom
- * 
- * @example
- * ```json
- * {
- *   "env": "cert",
- *   "baseUrl": "https://...",
- *   "credenciales": {
- *     "vendedor": { "usuario": "...", "password": "..." }
- *   },
- *   "dataPrueba": {
- *     "cuentaValida": "0011-2233-4455"
- *   }
- * }
- * ```
- */
 export interface WebConfig {
     env: string;
     baseUrl: string;
@@ -58,24 +28,13 @@ export interface WebConfig {
     };
     
     /**
-     * ✅ Credenciales por rol (opcional).
-     * 
-     * @example
-     * ```json
-     * "credenciales": {
-     *   "vendedor": { "usuario": "...", "password": "..." },
-     *   "administrador": { "usuario": "...", "password": "..." }
-     * }
-     * ```
-     */
-    credenciales?: Record<string, Credencial>;
-    
-    /**
-     * ✅ Data de prueba (opcional).
+     * ✅ Data de prueba.
      * 
      * @example
      * ```json
      * "dataPrueba": {
+     *   "usuario": "abc@banbif.com.pe",
+     *   "password": "abc123",
      *   "cuentaValida": "0011-2233-4455",
      *   "montoTransferencia": "100.00"
      * }
