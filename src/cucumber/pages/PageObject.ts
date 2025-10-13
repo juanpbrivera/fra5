@@ -1,14 +1,14 @@
-import type { AutomatizacionWeb } from '../cucumber/world/AutomatizacionWeb';
+import type { AutomatizacionWeb } from '../world/AutomatizacionWeb';
 import { Page, Locator } from '@playwright/test';
-import { ElementManager } from '../elements/ElementManager';
-import { WaitStrategies } from '../elements/WaitStrategies';
-import { InputActions } from '../interactions/InputActions';
-import { NavigationActions } from '../interactions/NavigationActions';
-import { ValidationStrategies } from '../validations/ValidationStrategies';
-import { UtilityHelper } from '../utilities/UtilityHelper';
-import { LoggerFactory } from '../core/logging/LoggerFactory';
-import { DataManager } from '../utilities/DataManager';
-import { esperar, AssercionesLocator, AssercionesPagina } from '../validations/Assertions';
+import { ElementManager } from '../../elements/ElementManager';
+import { WaitStrategies } from '../../elements/WaitStrategies';
+import { InputActions } from '../../interactions/InputActions';
+import { NavigationActions } from '../../interactions/NavigationActions';
+import { ValidationStrategies } from '../../validations/ValidationStrategies';
+import { UtilityHelper } from '../../utilities/UtilityHelper';
+import { LoggerFactory } from '../../core/logging/LoggerFactory';
+import { DataManager } from '../../utilities/DataManager';
+import { esperar, AssercionesLocator, AssercionesPagina } from '../../validations/Assertions';
 
 export abstract class PageObject {
     protected page: Page;

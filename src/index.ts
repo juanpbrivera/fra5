@@ -4,7 +4,7 @@
 export { AutomatizacionWeb } from './cucumber/world/AutomatizacionWeb';
 
 // Clase base para PageObjects
-export { PageObject } from './pages/PageObject';
+export { PageObject } from './cucumber/pages/PageObject';
 
 // Helper para reportes
 export { generateTestReport } from './cucumber/hooks/reportHelper';
