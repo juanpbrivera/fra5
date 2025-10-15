@@ -13,22 +13,6 @@ export interface ParametrosAutomatizacion {
     urlBase?: string;
 }
 
-/**
- * World de Cucumber para Automatizacion web.
- * 
- * ACCESO A CONFIGURACIÓN Y LOGGING:
- * Todos los métodos de ConfigManager y LoggerFactory están
- * encapsulados aquí para mantener el API limpio.
- * 
- * @example
- * ```typescript
- * // En hooks.ts
- * import { AutomatizacionWeb } from '@automation/web-automation-framework';
- * 
- * const logger = AutomatizacionWeb.crearLogger('CucumberHooks');
- * const timeout = AutomatizacionWeb.obtenerTimeoutCucumber();
- * ```
- */
 export class AutomatizacionWeb {
     private navegador!: Browser;
     private contexto!: BrowserContext;
@@ -45,77 +29,26 @@ export class AutomatizacionWeb {
         this.log = LoggerFactory.getLogger('AutomatizacionWeb');
     }
 
-    // ===== MÉTODOS ESTÁTICOS PARA CONFIGURACIÓN =====
-
-    /**
-     * Carga la configuración del ambiente especificado.
-     * Debe llamarse ANTES de cualquier otro método.
-     * 
-     * @param ambiente - Nombre del ambiente ('cert' | 'desa' | 'prod')
-     * 
-     * @example
-     * ```typescript
-     * // En hooks.ts (al inicio)
-     * AutomatizacionWeb.cargarConfiguracion();
-     * ```
-     */
     static cargarConfiguracion(ambiente?: string): void {
         ConfigManager.load(ambiente);
     }
 
-    /**
-     * Obtiene el timeout de Cucumber (el más grande de la jerarquía).
-     * 
-     * @returns Timeout en milisegundos
-     * 
-     * @example
-     * ```typescript
-     * const timeout = AutomatizacionWeb.obtenerTimeoutCucumber();
-     * setDefaultTimeout(timeout);
-     * ```
-     */
     static obtenerTimeoutCucumber(): number {
         return ConfigManager.getCucumberTimeout();
     }
 
-    /**
-     * Obtiene el timeout de Playwright.
-     * 
-     * @returns Timeout en milisegundos
-     */
     static obtenerTimeoutPlaywright(): number {
         return ConfigManager.getPlaywrightTimeout();
     }
 
-    /**
-     * Obtiene el timeout de Assertions.
-     * 
-     * @returns Timeout en milisegundos
-     */
     static obtenerTimeoutAssertion(): number {
         return ConfigManager.getAssertionTimeout();
     }
 
-    /**
-     * Obtiene el timeout de Steps.
-     * 
-     * @returns Timeout en milisegundos
-     */
     static obtenerTimeoutStep(): number {
         return ConfigManager.getStepTimeout();
     }
 
-    /**
-     * Obtiene todos los timeouts calculados.
-     * 
-     * @returns Objeto con todos los timeouts
-     * 
-     * @example
-     * ```typescript
-     * const timeouts = AutomatizacionWeb.obtenerTodosLosTimeouts();
-     * // { cucumber: 60000, playwright: 50000, assertion: 45000, step: 30000 }
-     * ```
-     */
     static obtenerTodosLosTimeouts(): {
         cucumber: number;
         playwright: number;
@@ -125,23 +58,9 @@ export class AutomatizacionWeb {
         return ConfigManager.getAllTimeouts();
     }
 
-    /**
-     * Crea un logger con el nombre del componente especificado.
-     * 
-     * @param componente - Nombre del componente (ej: 'CucumberHooks', 'LoginPage')
-     * @returns Logger de Pino
-     * 
-     * @example
-     * ```typescript
-     * const logger = AutomatizacionWeb.crearLogger('CucumberHooks');
-     * logger.info('Mensaje de log');
-     * ```
-     */
     static crearLogger(componente: string): PinoLogger {
         return LoggerFactory.getLogger(componente);
     }
-
-    // ===== CICLO DE VIDA =====
 
     async iniciar(): Promise<void> {
         const { browser, context, page } = await BrowserFactory.launch();
@@ -162,14 +81,39 @@ export class AutomatizacionWeb {
         this.log.info('Automatizacion Web finalizada');
     }
 
-    // ===== MÉTODOS PARA HOOKS =====
-
     async iniciarEscenario(scenario: any): Promise<void> {
         ReportingInterceptor.startScenario(
             scenario.pickle.name,
             scenario.gherkinDocument.feature?.name
         );
         await this.iniciar();
+    }
+
+    private esChromium(): boolean {
+        const browser = process.env.BROWSER?.toLowerCase() || 'chromium';
+        return browser === 'chromium' || browser === 'chrome';
+    }
+
+    /**
+     * Espera a que la página esté completamente cargada antes de capturar screenshot.
+     * Chrome: Solo delay simple sin tocar el estado de la página (evita reflow visual).
+     * Firefox/Webkit: Esperas completas de carga.
+     */
+    private async esperarEstabilidadPagina(): Promise<void> {
+        try {
+            if (this.esChromium()) {
+                // 🚀 CHROME: SOLO delay simple, SIN waitForLoadState
+                // Esto evita que Playwright pause/modifique el rendering
+                await this.pagina.waitForTimeout(800);
+            } else {
+                // 🦊 FIREFOX/WEBKIT: Esperas completas (no tienen problemas visuales)
+                await this.pagina.waitForLoadState('load', { timeout: 5000 });
+                await this.pagina.waitForLoadState('networkidle', { timeout: 3000 });
+                await this.pagina.waitForTimeout(300);
+            }
+        } catch (error) {
+            this.log.debug({ error }, 'Timeout esperando estabilidad, continuando...');
+        }
     }
 
     async capturarStep(pickleStep: any, result: any, Status: any): Promise<void> {
@@ -187,15 +131,16 @@ export class AutomatizacionWeb {
             stepStatus = 'skipped';
         }
 
-        let screenshotPath: string | undefined;
-
-        // ✅ CORRECTO: Solo captura en "always" o cuando falla en "on-failure"
         const debeCapturar = 
             config.screenshotMode === 'always' || 
             (config.screenshotMode === 'on-failure' && stepStatus === 'failed');
 
+        let screenshotPath: string | undefined;
+
         if (debeCapturar) {
             try {
+                await this.esperarEstabilidadPagina();
+
                 const nombreArchivo = `step_${pickleStep.text
                     .replace(/[^a-zA-Z0-9\s]/g, '')
                     .replace(/\s+/g, '_')
@@ -206,7 +151,7 @@ export class AutomatizacionWeb {
                     nombreArchivo
                 );
             } catch (error) {
-                this.log.error({ error, step: pickleStep.text }, 'Error capturando screenshot del step');
+                this.log.warn({ error, step: pickleStep.text }, 'Screenshot fallido');
             }
         }
 
@@ -216,18 +161,19 @@ export class AutomatizacionWeb {
     async finalizarEscenario(scenario: any, Status: any): Promise<void> {
         const config = ConfigManager.get();
         
-        // ✅ FIX: Lógica corregida para respetar screenshotMode
         const debeCapturarFinal = 
             config.screenshotMode === 'always' || 
             (config.screenshotMode === 'on-failure' && scenario.result?.status === Status.FAILED);
 
         if (debeCapturarFinal) {
-            const nombreArchivo = `final_${scenario.pickle.name
-                .replace(/[^a-zA-Z0-9\s]/g, '')
-                .replace(/\s+/g, '_')
-                .substring(0, 50)}`;
-
             try {
+                await this.esperarEstabilidadPagina();
+
+                const nombreArchivo = `final_${scenario.pickle.name
+                    .replace(/[^a-zA-Z0-9\s]/g, '')
+                    .replace(/\s+/g, '_')
+                    .substring(0, 50)}`;
+
                 const screenshotPath = await ReportingInterceptor.captureScreenshot(
                     this.pagina,
                     nombreArchivo
@@ -235,7 +181,7 @@ export class AutomatizacionWeb {
                 
                 (ReportingInterceptor as any).currentTest.screenshot = screenshotPath;
             } catch (error) {
-                this.log.error({ error }, 'Error capturando screenshot final');
+                this.log.warn({ error }, 'Screenshot final fallido');
             }
         }
 
@@ -254,8 +200,6 @@ export class AutomatizacionWeb {
         await generateTestReport();
     }
 
-    // ===== ACCESO A OBJETOS PLAYWRIGHT =====
-
     obtenerPagina(): Page {
         return this.pagina;
     }
@@ -272,13 +216,9 @@ export class AutomatizacionWeb {
         return ConfigManager.get();
     }
 
-    // ===== NAVEGACIÓN BASE =====
-
     async abrirPaginaBase(ruta: string = '/'): Promise<void> {
         await BrowserFactory.gotoBaseUrl(this.pagina, ruta);
     }
-
-    // ===== UTILIDADES PARA REPORTING =====
 
     async capturarPantalla(nombre: string): Promise<void> {
         await ScreenshotHelper.capture(this.pagina, nombre);

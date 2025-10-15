@@ -8,7 +8,7 @@ interface TestStep {
   name: string;
   status: 'passed' | 'failed' | 'skipped';
   timestamp: string;
-  screenshot?: string; // ← NUEVO: Screenshot por step
+  screenshot?: string;
 }
 
 interface ConsoleLog {
@@ -76,13 +76,6 @@ export class ReportingInterceptor {
     this.logger.info({ scenarioName, featureName }, 'Escenario iniciado');
   }
 
-  /**
-   * Captura un step con screenshot opcional.
-   * 
-   * @param stepName - Nombre del step
-   * @param status - Estado del step
-   * @param screenshotPath - Ruta del screenshot (opcional)
-   */
   static captureStep(stepName: string, status: 'passed' | 'failed' | 'skipped', screenshotPath?: string): void {
     this.currentTest.steps ??= [];
 
@@ -99,7 +92,47 @@ export class ReportingInterceptor {
   }
 
   /**
-   * Captura screenshot optimizado.
+   * Detecta si el navegador actual es Chromium.
+   */
+  private static esChromium(): boolean {
+    const browser = process.env.BROWSER?.toLowerCase() || 'chromium';
+    return browser === 'chromium' || browser === 'chrome';
+  }
+
+  /**
+   * Captura con CDP (Chrome DevTools Protocol) - solo para Chromium.
+   * No modifica el rendering de la página.
+   */
+  private static async captureWithCDP(page: Page, fullPath: string): Promise<void> {
+    const client = await page.context().newCDPSession(page);
+    
+    try {
+      const screenshot = await client.send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: false,
+      });
+
+      fs.writeFileSync(fullPath, Buffer.from(screenshot.data, 'base64'));
+    } finally {
+      await client.detach();
+    }
+  }
+
+  /**
+   * Captura con Playwright estándar - para Firefox/Webkit.
+   */
+  private static async captureWithPlaywright(page: Page, fullPath: string): Promise<void> {
+    await page.screenshot({
+      path: fullPath,
+      fullPage: false,
+      type: 'png',
+      timeout: 5000,
+    });
+  }
+
+  /**
+   * Captura screenshot optimizado multi-navegador.
+   * IMPORTANTE: Se debe llamar DESPUÉS de esperar la carga completa de la página.
    * 
    * @param page - Página de Playwright
    * @param name - Nombre del archivo
@@ -112,7 +145,6 @@ export class ReportingInterceptor {
       fs.mkdirSync(artifactsDir, { recursive: true });
     }
 
-    // Sanitizar nombre de archivo
     const sanitizedName = name
       .replace(/[^a-zA-Z0-9\s]/g, '')
       .replace(/\s+/g, '_')
@@ -123,19 +155,28 @@ export class ReportingInterceptor {
     const fullPath = path.join(process.cwd(), screenshotPath);
 
     try {
-      await page.screenshot({
-        path: fullPath,
-        fullPage: false,
-        type: 'png',
-        animations: 'disabled',
-        scale: 'device',
-        caret: 'hide'
-      });
+      if (this.esChromium()) {
+        // 🚀 CHROME: CDP directo (sin modificar rendering)
+        await this.captureWithCDP(page, fullPath);
+        this.logger.debug({ method: 'CDP', path: screenshotPath }, 'Screenshot capturado');
+      } else {
+        // 🦊 FIREFOX/WEBKIT: Playwright estándar
+        await this.captureWithPlaywright(page, fullPath);
+        this.logger.debug({ method: 'Playwright', path: screenshotPath }, 'Screenshot capturado');
+      }
 
       return screenshotPath;
     } catch (error) {
-      this.logger.error({ error, name }, 'Error al capturar screenshot');
-      throw error;
+      this.logger.warn({ error, name }, 'Error capturando screenshot');
+      
+      // Fallback: Intenta con método estándar
+      try {
+        await this.captureWithPlaywright(page, fullPath);
+        return screenshotPath;
+      } catch (fallbackError) {
+        this.logger.error({ fallbackError, name }, 'Screenshot fallido completamente');
+        return screenshotPath;
+      }
     }
   }
 
