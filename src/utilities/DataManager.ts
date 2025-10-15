@@ -61,7 +61,7 @@ export class DataManager {
 
         const resultado = data.find(row => 
             Object.entries(filters).every(([key, value]) => {
-                const rowValue = (row as any)[key];
+                const rowValue = (row as Record<string, any>)[key];
                 // Comparación case-insensitive para strings
                 if (typeof rowValue === 'string' && typeof value === 'string') {
                     return rowValue.toLowerCase() === value.toLowerCase();
@@ -109,7 +109,7 @@ export class DataManager {
 
         return data.filter(row =>
             Object.entries(filters).every(([key, value]) => {
-                const rowValue = (row as any)[key];
+                const rowValue = (row as Record<string, any>)[key];
                 if (typeof rowValue === 'string' && typeof value === 'string') {
                     return rowValue.toLowerCase() === value.toLowerCase();
                 }
@@ -141,13 +141,13 @@ export class DataManager {
         filters: Record<string, any>,
         column: string
     ): Promise<T> {
-        const fila = await this.obtenerFila(csvName, filters);
-        const valor = (fila as any)[column];
+        const fila = await this.obtenerFila<Record<string, any>>(csvName, filters);
+        const valor = fila[column];
 
         if (valor === undefined) {
             throw new Error(
                 `Columna '${column}' no existe en '${csvName}.csv'\n` +
-                `Columnas disponibles: ${Object.keys(fila as any).join(', ')}`
+                `Columnas disponibles: ${Object.keys(fila).join(', ')}`
             );
         }
 
